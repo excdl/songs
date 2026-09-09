@@ -3,117 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>KTV 點歌系統</title>
-
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-
     body {
-      font-family:
-        "Noto Sans TC",
-        "Microsoft JhengHei",
-        Arial,
-        sans-serif;
-
-      background:
-        radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
-
+      font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+      background: radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
       color: #fff;
       min-height: 100vh;
     }
-
-    /* =========================
-       Header
-    ========================= */
-
     header {
       height: 72px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 30px;
-
       background: rgba(10, 10, 20, 0.92);
       border-bottom: 1px solid rgba(255,255,255,0.08);
-
       position: sticky;
       top: 0;
       z-index: 100;
       backdrop-filter: blur(12px);
     }
-
     .logo {
       font-size: 24px;
       font-weight: bold;
-
-      background: linear-gradient(
-        90deg,
-        #ff2bd6,
-        #8c5cff,
-        #22d3ee
-      );
-
+      background: linear-gradient(90deg, #ff2bd6, #8c5cff, #22d3ee);
       -webkit-background-clip: text;
       color: transparent;
     }
-
     .room-info {
       color: #aaa;
       font-size: 14px;
     }
-
     .room-code {
       color: #fff;
       font-weight: bold;
     }
-
-    /* =========================
-       Main
-    ========================= */
-
     main {
       max-width: 1400px;
       margin: auto;
       padding: 25px;
     }
-
     .search-area {
       display: flex;
       gap: 12px;
       margin-bottom: 25px;
     }
-
     .search-box {
       flex: 1;
       position: relative;
     }
-
     .search-box input {
       width: 100%;
       height: 52px;
-
       border: 1px solid #38384c;
       border-radius: 14px;
-
       padding: 0 20px 0 48px;
-
       background: #151522;
       color: #fff;
-
       outline: none;
       font-size: 16px;
     }
-
     .search-box input:focus {
       border-color: #9b5cff;
       box-shadow: 0 0 0 3px rgba(155,92,255,0.15);
     }
-
     .search-icon {
       position: absolute;
       left: 18px;
@@ -121,37 +80,23 @@
       font-size: 20px;
       color: #999;
     }
-
     button {
       border: none;
       cursor: pointer;
       transition: 0.2s;
     }
-
     .search-btn {
       width: 100px;
       border-radius: 14px;
-
-      background: linear-gradient(
-        135deg,
-        #ff2bd6,
-        #734cff
-      );
-
+      background: linear-gradient(135deg, #ff2bd6, #734cff);
       color: white;
       font-weight: bold;
       font-size: 15px;
     }
-
     .search-btn:hover {
       transform: translateY(-1px);
       filter: brightness(1.1);
     }
-
-    /* =========================
-       Category
-    ========================= */
-
     .categories {
       display: flex;
       gap: 10px;
@@ -159,1305 +104,528 @@
       margin-bottom: 25px;
       padding-bottom: 5px;
     }
-
     .category {
       flex-shrink: 0;
-
       padding: 9px 18px;
-
       border-radius: 30px;
-
       background: #171725;
       color: #aaa;
-
       border: 1px solid #2d2d3d;
     }
-
     .category.active {
       color: white;
-
-      background: linear-gradient(
-        135deg,
-        #ff2bd6,
-        #744cff
-      );
-
+      background: linear-gradient(135deg, #ff2bd6, #744cff);
       border-color: transparent;
     }
-
     .category:hover {
       color: white;
     }
-
-    /* =========================
-       Layout
-    ========================= */
-
     .content {
       display: grid;
       grid-template-columns: 1fr 380px;
       gap: 25px;
     }
-
     .section-title {
       font-size: 20px;
       font-weight: bold;
       margin-bottom: 18px;
     }
-
-    /* =========================
-       Song List
-    ========================= */
-
     .song-list {
       display: grid;
       gap: 12px;
     }
-
     .song {
       display: flex;
       align-items: center;
       gap: 15px;
-
       padding: 14px;
-
       border: 1px solid rgba(255,255,255,0.07);
       background: rgba(25,25,38,0.75);
-
       border-radius: 15px;
-
       transition: 0.2s;
     }
-
     .song:hover {
       background: #222235;
       transform: translateY(-1px);
     }
-
     .cover {
       width: 64px;
       height: 64px;
-
       border-radius: 10px;
-
       display: flex;
       align-items: center;
       justify-content: center;
-
       flex-shrink: 0;
-
       font-size: 25px;
-
-      background:
-        linear-gradient(
-          135deg,
-          #ff2bd6,
-          #653eff
-        );
+      background: linear-gradient(135deg, #ff2bd6, #653eff);
     }
-
     .song-info {
       flex: 1;
       min-width: 0;
     }
-
     .song-title {
       font-size: 17px;
       font-weight: bold;
-
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
     .artist {
       color: #999;
       font-size: 14px;
       margin-top: 6px;
     }
-
     .song-actions {
       display: flex;
       gap: 8px;
       align-items: center;
     }
-
     .favorite {
       width: 38px;
       height: 38px;
-
       border-radius: 10px;
-
       background: #292938;
       color: #aaa;
-
       font-size: 18px;
     }
-
     .favorite.active {
       color: #ff3e91;
     }
-
     .add-btn {
       padding: 10px 15px;
-
       border-radius: 10px;
-
       color: white;
-
-      background: linear-gradient(
-        135deg,
-        #ff2bd6,
-        #744cff
-      );
-
+      background: linear-gradient(135deg, #ff2bd6, #744cff);
       font-weight: bold;
     }
-
     .add-btn:hover {
       filter: brightness(1.15);
     }
-
-    /* =========================
-       Queue
-    ========================= */
-
     .queue-panel {
       background: rgba(18,18,29,0.9);
-
       border: 1px solid rgba(255,255,255,0.08);
-
       border-radius: 18px;
-
       padding: 20px;
-
       height: fit-content;
-
       position: sticky;
       top: 95px;
     }
-
     .queue-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-
       margin-bottom: 15px;
     }
-
     .queue-count {
       color: #aaa;
       font-size: 13px;
     }
-
     .queue-list {
       display: grid;
       gap: 10px;
     }
-
     .queue-item {
       display: flex;
       gap: 10px;
       align-items: center;
-
       padding: 11px;
-
       border-radius: 12px;
-
       background: #20202e;
     }
-
     .queue-number {
       width: 28px;
       color: #8d7aff;
       font-weight: bold;
       text-align: center;
     }
-
     .queue-info {
       flex: 1;
       min-width: 0;
     }
-
     .queue-title {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-
       font-size: 14px;
     }
-
     .queue-artist {
       font-size: 12px;
       color: #888;
       margin-top: 3px;
     }
-
     .remove-btn {
       width: 30px;
       height: 30px;
-
       border-radius: 8px;
-
       color: #888;
       background: transparent;
-
       font-size: 18px;
     }
-
     .remove-btn:hover {
       color: #ff4d7d;
       background: #30303d;
     }
-
     .empty {
       color: #777;
       text-align: center;
-
       padding: 30px 10px;
-
       font-size: 14px;
     }
-
-    /* =========================
-       Player
-    ========================= */
-
     .player {
       margin-top: 18px;
-
-      background:
-        linear-gradient(
-          135deg,
-          #251040,
-          #111126
-        );
-
+      background: linear-gradient(135deg, #251040, #111126);
       border-radius: 16px;
-
       padding: 18px;
     }
-
     .now-playing {
       color: #aaa;
       font-size: 12px;
       margin-bottom: 5px;
     }
-
     .current-title {
       font-size: 17px;
       font-weight: bold;
     }
-
     .current-artist {
       font-size: 13px;
       color: #888;
       margin-top: 3px;
     }
-
     .player-controls {
       display: flex;
       gap: 8px;
       margin-top: 15px;
     }
-
     .control-btn {
       flex: 1;
-
       height: 40px;
-
       border-radius: 10px;
-
       background: #29293a;
       color: white;
     }
-
     .control-btn:hover {
       background: #3a3a50;
     }
-
     .play-btn {
-      background: linear-gradient(
-        135deg,
-        #ff2bd6,
-        #744cff
-      );
+      background: linear-gradient(135deg, #ff2bd6, #744cff);
     }
-
     .volume {
       width: 100%;
       margin-top: 12px;
     }
-
     .volume input {
       width: 100%;
     }
-
     audio {
       width: 100%;
       margin-top: 12px;
     }
-
-    /* =========================
-       Toast
-    ========================= */
-
     .toast {
       position: fixed;
-
       left: 50%;
       bottom: 30px;
-
       transform: translateX(-50%) translateY(20px);
-
       background: #242435;
       color: white;
-
       padding: 12px 20px;
-
       border-radius: 30px;
-
       opacity: 0;
       pointer-events: none;
-
       transition: 0.3s;
-
       z-index: 999;
     }
-
     .toast.show {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
-
-    /* =========================
-       Mobile
-    ========================= */
-
     @media (max-width: 900px) {
-      .content {
-        grid-template-columns: 1fr;
-      }
-
-      .queue-panel {
-        position: static;
-      }
-    }
-
-    @media (max-width: 600px) {
-      header {
-        padding: 0 15px;
-      }
-
-      .room-info {
-        display: none;
-      }
-
-      main {
-        padding: 15px;
-      }
-
-      .search-area {
-        gap: 8px;
-      }
-
-      .search-btn {
-        width: 70px;
-      }
-
-      .song {
-        padding: 10px;
-      }
-
-      .cover {
-        width: 52px;
-        height: 52px;
-      }
-
-      .song-actions {
-        flex-direction: column;
-      }
-
-      .add-btn {
-        padding: 8px 10px;
-        font-size: 12px;
-      }
+      .content { grid-template-columns: 1fr; }
+      .queue-panel { position: static; }
     }
   </style>
 </head>
-
 <body>
 
 <header>
-
-  <div class="logo">
-    🎤 KTV
-  </div>
-
-  <div class="room-info">
-    包廂：
-    <span class="room-code">
-      A-208
-    </span>
-  </div>
-
+  <div class="logo">🎤 KTV 點歌系統</div>
+  <div class="room-info">包廂：<span class="room-code">A-208</span></div>
 </header>
 
-
 <main>
-
-  <!-- 搜尋 -->
+  <!-- 搜尋列 -->
   <div class="search-area">
-
     <div class="search-box">
-
-      <span class="search-icon">
-        🔍
-      </span>
-
-      <input
-        type="text"
-        id="searchInput"
-        placeholder="搜尋歌名或歌手..."
-      >
-
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="輸入歌名、歌手或編號搜尋...">
     </div>
-
-    <button
-      class="search-btn"
-      onclick="searchSongs()"
-    >
-      搜尋
-    </button>
-
+    <button class="search-btn" onclick="fetchSongs()">搜尋</button>
   </div>
 
-
-  <!-- 分類 -->
+  <!-- 分類篩選 -->
   <div class="categories">
-
-    <button
-      class="category active"
-      onclick="filterCategory('全部', this)"
-    >
-      全部
-    </button>
-
-    <button
-      class="category"
-      onclick="filterCategory('國語', this)"
-    >
-      國語
-    </button>
-
-    <button
-      class="category"
-      onclick="filterCategory('台語', this)"
-    >
-      台語
-    </button>
-
-    <button
-      class="category"
-      onclick="filterCategory('粵語', this)"
-    >
-      粵語
-    </button>
-
-    <button
-      class="category"
-      onclick="filterCategory('英文', this)"
-    >
-      英文
-    </button>
-
-    <button
-      class="category"
-      onclick="filterCategory('日文', this)"
-    >
-      日文
-    </button>
-
+    <button class="category active" onclick="filterLanguage('全部', this)">全部</button>
+    <button class="category" onclick="filterLanguage('國語', this)">國語</button>
+    <button class="category" onclick="filterLanguage('台語', this)">台語</button>
+    <button class="category" onclick="filterLanguage('粵語', this)">粵語</button>
+    <button class="category" onclick="filterLanguage('英文', this)">英文</button>
+    <button class="category" onclick="filterLanguage('日文', this)">日文</button>
   </div>
-
 
   <div class="content">
-
-    <!-- 歌曲 -->
+    <!-- 歌曲列表 -->
     <section>
-
-      <div class="section-title">
-        🎵 歌曲列表
+      <div class="section-title">🎵 雲端歌曲列表</div>
+      <div class="song-list" id="songList">
+        <div class="empty">載入中...</div>
       </div>
-
-      <div
-        class="song-list"
-        id="songList"
-      ></div>
-
     </section>
 
-
-    <!-- 點歌佇列 -->
+    <!-- 點歌佇列與播放器 -->
     <aside class="queue-panel">
-
       <div class="queue-header">
-
-        <div class="section-title">
-          📋 待播歌曲
-        </div>
-
-        <div
-          class="queue-count"
-          id="queueCount"
-        >
-          0 首
-        </div>
-
+        <div class="section-title">📋 待播歌曲</div>
+        <div class="queue-count" id="queueCount">0 首</div>
       </div>
+      <div class="queue-list" id="queueList"></div>
 
-
-      <div
-        class="queue-list"
-        id="queueList"
-      ></div>
-
-
-      <!-- 播放器 -->
       <div class="player">
-
-        <div class="now-playing">
-          NOW PLAYING
-        </div>
-
-        <div
-          class="current-title"
-          id="currentTitle"
-        >
-          尚未播放
-        </div>
-
-        <div
-          class="current-artist"
-          id="currentArtist"
-        >
-          -
-        </div>
-
-        <audio
-          id="audioPlayer"
-          controls
-        ></audio>
-
+        <div class="now-playing">NOW PLAYING</div>
+        <div class="current-title" id="currentTitle">尚未播放</div>
+        <div class="current-artist" id="currentArtist">-</div>
+        <audio id="audioPlayer" controls></audio>
         <div class="player-controls">
-
-          <button
-            class="control-btn play-btn"
-            onclick="playCurrent()"
-          >
-            ▶ 播放
-          </button>
-
-          <button
-            class="control-btn"
-            onclick="nextSong()"
-          >
-            ⏭ 下一首
-          </button>
-
+          <button class="control-btn play-btn" onclick="playCurrent()">▶ 播放</button>
+          <button class="control-btn" onclick="nextSong()">⏭ 下一首</button>
         </div>
-
         <div class="volume">
-
-          <input
-            type="range"
-            id="volume"
-            min="0"
-            max="1"
-            step="0.01"
-            value="0.8"
-          >
-
+          <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8">
         </div>
-
       </div>
-
     </aside>
-
   </div>
-
 </main>
 
-
-<div
-  class="toast"
-  id="toast"
-></div>
-
+<div class="toast" id="toast"></div>
 
 <script>
+  // 請替換成您 Google Apps Script 部署後的網頁應用程式 URL
+  const API_URL = "https://script.google.com/macros/s/AKfycbxrHrgoJjFsFgo2Ejd_OzBu0XhyUa_FRM8aymA1uWQrCUk4CaFAirN3_G-mR4nPuI3n/exec";
 
-  /*
-   * ========================================
-   * 歌曲資料
-   * ========================================
-   *
-   * media：
-   * 放 MP3 / MP4 / 網路音樂檔案網址
-   *
-   * 例如：
-   * media: "music/001.mp3"
-   */
+  let allSongs = [];
+  let currentLanguage = "全部";
 
-  const songs = [
-
-    {
-      id: 1,
-      title: "告白氣球",
-      artist: "周杰倫",
-      language: "國語",
-      media: "music/告白氣球.mp3"
-    },
-
-    {
-      id: 2,
-      title: "晴天",
-      artist: "周杰倫",
-      language: "國語",
-      media: "music/晴天.mp3"
-    },
-
-    {
-      id: 3,
-      title: "夜曲",
-      artist: "周杰倫",
-      language: "國語",
-      media: "music/夜曲.mp3"
-    },
-
-    {
-      id: 4,
-      title: "如果可以",
-      artist: "韋禮安",
-      language: "國語",
-      media: "music/如果可以.mp3"
-    },
-
-    {
-      id: 5,
-      title: "愛情轉移",
-      artist: "陳奕迅",
-      language: "粵語",
-      media: "music/愛情轉移.mp3"
-    },
-
-    {
-      id: 6,
-      title: "十年",
-      artist: "陳奕迅",
-      language: "國語",
-      media: "music/十年.mp3"
-    },
-
-    {
-      id: 7,
-      title: "演員",
-      artist: "薛之謙",
-      language: "國語",
-      media: "music/演員.mp3"
-    },
-
-    {
-      id: 8,
-      title: "修煉愛情",
-      artist: "林俊傑",
-      language: "國語",
-      media: "music/修煉愛情.mp3"
-    },
-
-    {
-      id: 9,
-      title: "小幸運",
-      artist: "田馥甄",
-      language: "國語",
-      media: "music/小幸運.mp3"
-    },
-
-    {
-      id: 10,
-      title: "光年之外",
-      artist: "鄧紫棋",
-      language: "國語",
-      media: "music/光年之外.mp3"
-    }
-
-  ];
-
-
-  /*
-   * ========================================
-   * 系統資料
-   * ========================================
-   */
-
-  let queue =
-    JSON.parse(
-      localStorage.getItem("ktvQueue")
-    ) || [];
-
-  let favorites =
-    JSON.parse(
-      localStorage.getItem("ktvFavorites")
-    ) || [];
-
-  let currentCategory = "全部";
-
+  let queue = JSON.parse(localStorage.getItem("ktvQueue")) || [];
+  let favorites = JSON.parse(localStorage.getItem("ktvFavorites")) || [];
   let currentSong = null;
 
+  // 初始化
+  window.addEventListener("DOMContentLoaded", () => {
+    fetchSongs();
+    renderQueue();
+  });
 
-  /*
-   * ========================================
-   * 初始化
-   * ========================================
-   */
+  // 從 Google 試算表 API 取得資料
+  async function fetchSongs() {
+    const keyword = document.getElementById("searchInput").value.trim();
+    const url = `${API_URL}?q=${encodeURIComponent(keyword)}`;
 
-  renderSongs();
+    try {
+      const response = await fetch(url);
+      const result = await response.json();
 
-  renderQueue();
+      if (result.success) {
+        allSongs = result.data.map((item, index) => ({
+          id: index + 1,
+          song_no: item.song_no,
+          title: item.title,
+          artist: item.artist,
+          language: item.language,
+          category: item.category,
+          brand: item.brand,
+          status: item.status,
+          media: `music/${item.title}.mp3` // 可依實際音樂檔案路徑調整
+        }));
+        renderSongList();
+      } else {
+        showToast("取得歌單失敗");
+      }
+    } catch (error) {
+      console.error("API 連線錯誤:", error);
+      showToast("無法連線至雲端歌單");
+    }
+  }
 
+  // 渲染歌曲列表（包含前端語言分類過濾）
+  function renderSongList() {
+    const list = document.getElementById("songList");
 
-  /*
-   * ========================================
-   * 顯示歌曲
-   * ========================================
-   */
-
-  function renderSongs(
-    keyword = ""
-  ) {
-
-    const list =
-      document.getElementById("songList");
-
-    const search =
-      keyword.toLowerCase().trim();
-
-
-    const filtered =
-      songs.filter(song => {
-
-        const matchSearch =
-          song.title
-            .toLowerCase()
-            .includes(search)
-          ||
-          song.artist
-            .toLowerCase()
-            .includes(search);
-
-        const matchCategory =
-          currentCategory === "全部"
-          ||
-          song.language === currentCategory;
-
-        return matchSearch && matchCategory;
-
-      });
-
+    const filtered = allSongs.filter(song => {
+      const matchLanguage = (currentLanguage === "全部" || song.language === currentLanguage);
+      return matchLanguage;
+    });
 
     if (filtered.length === 0) {
-
-      list.innerHTML = `
-        <div class="empty">
-          找不到符合的歌曲
-        </div>
-      `;
-
+      list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
       return;
-
     }
 
-
-    list.innerHTML =
-      filtered.map(song => {
-
-        const isFavorite =
-          favorites.includes(song.id);
-
-        return `
-
-          <div class="song">
-
-            <div class="cover">
-              🎤
-            </div>
-
-            <div class="song-info">
-
-              <div class="song-title">
-                ${song.title}
-              </div>
-
-              <div class="artist">
-                ${song.artist}
-                ·
-                ${song.language}
-              </div>
-
-            </div>
-
-            <div class="song-actions">
-
-              <button
-                class="favorite ${isFavorite ? "active" : ""}"
-                onclick="toggleFavorite(${song.id})"
-              >
-                ${isFavorite ? "♥" : "♡"}
-              </button>
-
-              <button
-                class="add-btn"
-                onclick="addSong(${song.id})"
-              >
-                ＋ 點歌
-              </button>
-
-            </div>
-
+    list.innerHTML = filtered.map(song => {
+      const isFavorite = favorites.includes(song.song_no);
+      return `
+        <div class="song">
+          <div class="cover">🎤</div>
+          <div class="song-info">
+            <div class="song-title">[${song.song_no}] ${song.title}</div>
+            <div class="artist">${song.artist} · ${song.language || '未分類'} (${song.brand || ''})</div>
           </div>
-
-        `;
-
-      }).join("");
-
+          <div class="song-actions">
+            <button class="favorite ${isFavorite ? "active" : ""}" onclick="toggleFavorite('${song.song_no}')">
+              ${isFavorite ? "♥" : "♡"}
+            </button>
+            <button class="add-btn" onclick="addSong('${song.song_no}')">＋ 點歌</button>
+          </div>
+        </div>
+      `;
+    }).join("");
   }
 
-
-  /*
-   * ========================================
-   * 搜尋
-   * ========================================
-   */
-
-  function searchSongs() {
-
-    const input =
-      document.getElementById("searchInput");
-
-    renderSongs(input.value);
-
-  }
-
-
-  document
-    .getElementById("searchInput")
-    .addEventListener(
-      "input",
-      function () {
-
-        renderSongs(this.value);
-
-      }
-    );
-
-
-  /*
-   * ========================================
-   * 分類
-   * ========================================
-   */
-
-  function filterCategory(
-    category,
-    button
-  ) {
-
-    currentCategory = category;
-
-
-    document
-      .querySelectorAll(".category")
-      .forEach(btn => {
-
-        btn.classList.remove("active");
-
-      });
-
-
+  // 語言分類切換
+  function filterLanguage(language, button) {
+    currentLanguage = language;
+    document.querySelectorAll(".category").forEach(btn => btn.classList.remove("active"));
     button.classList.add("active");
-
-
-    const keyword =
-      document
-        .getElementById("searchInput")
-        .value;
-
-    renderSongs(keyword);
-
+    renderSongList();
   }
 
+  // 搜尋框即時監聽（輸入時自動呼叫 API 查詢）
+  let searchTimer;
+  document.getElementById("searchInput").addEventListener("input", function() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      fetchSongs();
+    }, 400);
+  });
 
-  /*
-   * ========================================
-   * 點歌
-   * ========================================
-   */
-
-  function addSong(id) {
-
-    const song =
-      songs.find(
-        song => song.id === id
-      );
-
+  // 點歌功能
+  function addSong(songNo) {
+    const song = allSongs.find(s => String(s.song_no) === String(songNo));
     if (!song) return;
-
 
     queue.push({
       ...song,
-      queueId:
-        Date.now() +
-        Math.random()
+      queueId: Date.now() + Math.random()
     });
 
-
     saveQueue();
-
     renderQueue();
-
-    showToast(
-      `已點歌：${song.title}`
-    );
-
+    showToast(`已點歌：${song.title}`);
   }
 
-
-  /*
-   * ========================================
-   * 顯示佇列
-   * ========================================
-   */
-
+  // 渲染待播清單
   function renderQueue() {
-
-    const list =
-      document.getElementById("queueList");
-
-    const count =
-      document.getElementById("queueCount");
-
-
-    count.textContent =
-      `${queue.length} 首`;
-
+    const list = document.getElementById("queueList");
+    const count = document.getElementById("queueCount");
+    count.textContent = `${queue.length} 首`;
 
     if (queue.length === 0) {
+      list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>選擇歌曲開始點歌吧 🎤</div>`;
+      return;
+    }
 
-      list.innerHTML = `
-        <div class="empty">
-          目前沒有待播歌曲
-          <br>
-          選擇歌曲開始點歌吧 🎤
+    list.innerHTML = queue.map((song, index) => `
+      <div class="queue-item">
+        <div class="queue-number">${index + 1}</div>
+        <div class="queue-info">
+          <div class="queue-title">[${song.song_no}] ${song.title}</div>
+          <div class="queue-artist">${song.artist}</div>
         </div>
-      `;
-
-      return;
-
-    }
-
-
-    list.innerHTML =
-      queue.map(
-        (song, index) => `
-
-          <div class="queue-item">
-
-            <div class="queue-number">
-              ${index + 1}
-            </div>
-
-            <div class="queue-info">
-
-              <div class="queue-title">
-                ${song.title}
-              </div>
-
-              <div class="queue-artist">
-                ${song.artist}
-              </div>
-
-            </div>
-
-            <button
-              class="remove-btn"
-              onclick="removeSong(${song.queueId})"
-            >
-              ×
-            </button>
-
-          </div>
-
-        `
-      ).join("");
-
+        <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
+      </div>
+    `).join("");
   }
 
-
-  /*
-   * ========================================
-   * 刪除歌曲
-   * ========================================
-   */
-
+  // 移除佇列歌曲
   function removeSong(queueId) {
-
-    queue =
-      queue.filter(
-        song =>
-          song.queueId !== queueId
-      );
-
-
+    queue = queue.filter(song => song.queueId !== queueId);
     saveQueue();
-
     renderQueue();
-
     showToast("已移除歌曲");
-
   }
 
-
-  /*
-   * ========================================
-   * 播放目前歌曲
-   * ========================================
-   */
-
+  // 播放目前歌曲
   function playCurrent() {
-
     if (!currentSong) {
-
       if (queue.length === 0) {
-
-        showToast("目前沒有歌曲");
-
+        showToast("目前沒有待播歌曲");
         return;
-
       }
-
       currentSong = queue[0];
-
     }
 
+    const player = document.getElementById("audioPlayer");
+    player.src = currentSong.media;
+    document.getElementById("currentTitle").textContent = `[${currentSong.song_no}] ${currentSong.title}`;
+    document.getElementById("currentArtist").textContent = currentSong.artist;
 
-    const player =
-      document.getElementById(
-        "audioPlayer"
-      );
-
-
-    player.src =
-      currentSong.media;
-
-
-    document
-      .getElementById("currentTitle")
-      .textContent =
-      currentSong.title;
-
-
-    document
-      .getElementById("currentArtist")
-      .textContent =
-      currentSong.artist;
-
-
-    player.play()
-      .catch(() => {
-
-        showToast(
-          "找不到音樂檔案，請確認 media 路徑"
-        );
-
-      });
-
+    player.play().catch(() => {
+      showToast("找不到音樂檔案，請確認 media 路徑");
+    });
   }
 
-
-  /*
-   * ========================================
-   * 下一首
-   * ========================================
-   */
-
+  // 下一首
   function nextSong() {
-
     if (queue.length === 0) {
-
       currentSong = null;
-
-      document
-        .getElementById("currentTitle")
-        .textContent =
-        "尚未播放";
-
-      document
-        .getElementById("currentArtist")
-        .textContent =
-        "-";
-
-      document
-        .getElementById("audioPlayer")
-        .removeAttribute("src");
-
+      document.getElementById("currentTitle").textContent = "尚未播放";
+      document.getElementById("currentArtist").textContent = "-";
+      document.getElementById("audioPlayer").removeAttribute("src");
       showToast("沒有下一首歌曲");
-
       return;
-
     }
 
-
-    currentSong =
-      queue.shift();
-
-
+    currentSong = queue.shift();
     saveQueue();
-
     renderQueue();
-
     playCurrent();
-
   }
 
+  // 播放完畢自動下一首
+  document.getElementById("audioPlayer").addEventListener("ended", () => {
+    nextSong();
+  });
 
-  /*
-   * ========================================
-   * 音樂播放完自動下一首
-   * ========================================
-   */
+  // 音量控制
+  document.getElementById("volume").addEventListener("input", function() {
+    document.getElementById("audioPlayer").volume = this.value;
+  });
 
-  document
-    .getElementById("audioPlayer")
-    .addEventListener(
-      "ended",
-      function () {
-
-        nextSong();
-
-      }
-    );
-
-
-  /*
-   * ========================================
-   * 音量
-   * ========================================
-   */
-
-  document
-    .getElementById("volume")
-    .addEventListener(
-      "input",
-      function () {
-
-        document
-          .getElementById("audioPlayer")
-          .volume =
-          this.value;
-
-      }
-    );
-
-
-  /*
-   * ========================================
-   * 收藏
-   * ========================================
-   */
-
-  function toggleFavorite(id) {
-
-    if (favorites.includes(id)) {
-
-      favorites =
-        favorites.filter(
-          item => item !== id
-        );
-
+  // 收藏切換
+  function toggleFavorite(songNo) {
+    if (favorites.includes(songNo)) {
+      favorites = favorites.filter(item => item !== songNo);
       showToast("已取消收藏");
-
     } else {
-
-      favorites.push(id);
-
+      favorites.push(songNo);
       showToast("已加入收藏");
-
     }
-
-
-    localStorage.setItem(
-      "ktvFavorites",
-      JSON.stringify(favorites)
-    );
-
-
-    const keyword =
-      document
-        .getElementById("searchInput")
-        .value;
-
-    renderSongs(keyword);
-
+    localStorage.setItem("ktvFavorites", JSON.stringify(favorites));
+    renderSongList();
   }
-
-
-  /*
-   * ========================================
-   * 儲存點歌佇列
-   * ========================================
-   */
 
   function saveQueue() {
-
-    localStorage.setItem(
-      "ktvQueue",
-      JSON.stringify(queue)
-    );
-
+    localStorage.setItem("ktvQueue", JSON.stringify(queue));
   }
-
-
-  /*
-   * ========================================
-   * Toast 提示
-   * ========================================
-   */
 
   let toastTimer;
-
   function showToast(message) {
-
-    const toast =
-      document.getElementById("toast");
-
-    toast.textContent =
-      message;
-
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
     toast.classList.add("show");
-
-
     clearTimeout(toastTimer);
-
-
-    toastTimer =
-      setTimeout(() => {
-
-        toast.classList.remove("show");
-
-      }, 2000);
-
+    toastTimer = setTimeout(() => {
+      toast.classList.remove("show");
+    }, 2000);
   }
-
 </script>
 
 </body>
