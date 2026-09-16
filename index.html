@@ -1,382 +1,568 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KTV 點歌系統</title>
-<style>
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-body {
-  font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
-  background: radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
-  color: #fff;
-  min-height: 100vh;
-}
-header {
-  height: 72px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 30px;
-  background: rgba(10, 10, 20, .92);
-  border-bottom: 1px solid rgba(255, 255, 255, .08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(12px);
-}
-.logo {
-  font-size: 24px;
-  font-weight: bold;
-  background: linear-gradient(90deg, #ff2bd6, #8c5cff, #22d3ee);
-  -webkit-background-clip: text;
-  color: transparent;
-}
-.room-info {
-  color: #aaa;
-  font-size: 14px;
-}
-.room-code {
-  color: #fff;
-  font-weight: bold;
-}
-main {
-  max-width: 1400px;
-  margin: auto;
-  padding: 25px;
-}
-.search-area {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.search-box {
-  flex: 1;
-  position: relative;
-}
-.search-box input {
-  width: 100%;
-  height: 52px;
-  border: 1px solid #38384c;
-  border-radius: 14px;
-  padding: 0 20px 0 48px;
-  background: #151522;
-  color: #fff;
-  outline: none;
-  font-size: 16px;
-}
-.search-box input:focus {
-  border-color: #9b5cff;
-  box-shadow: 0 0 0 3px rgba(155, 92, 255, .15);
-}
-.search-icon {
-  position: absolute;
-  left: 18px;
-  top: 15px;
-  font-size: 20px;
-  color: #999;
-}
-button {
-  border: none;
-  cursor: pointer;
-  transition: .2s;
-}
-.search-btn {
-  width: 100px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ff2bd6, #734cff);
-  color: white;
-  font-weight: bold;
-  font-size: 15px;
-}
-.search-btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.1);
-}
-.categories {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  margin-bottom: 25px;
-  padding-bottom: 5px;
-}
-.category {
-  flex-shrink: 0;
-  padding: 9px 18px;
-  border-radius: 30px;
-  background: #171725;
-  color: #aaa;
-  border: 1px solid #2d2d3d;
-}
-.category.active {
-  color: white;
-  background: linear-gradient(135deg, #ff2bd6, #744cff);
-  border-color: transparent;
-}
-.category:hover {
-  color: white;
-}
-.content {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 25px;
-}
-.section-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 18px;
-}
-.result-info {
-  color: #888;
-  font-size: 13px;
-  margin-bottom: 12px;
-}
-.song-list {
-  display: grid;
-  gap: 12px;
-}
-.song {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, .07);
-  background: rgba(25, 25, 38, .75);
-  border-radius: 15px;
-  transition: .2s;
-}
-.song:hover {
-  background: #222235;
-  transform: translateY(-1px);
-}
-.cover {
-  width: 64px;
-  height: 64px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 25px;
-  background: linear-gradient(135deg, #ff2bd6, #653eff);
-}
-.song-info {
-  flex: 1;
-  min-width: 0;
-}
-.song-title {
-  font-size: 17px;
-  font-weight: bold;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.artist {
-  color: #999;
-  font-size: 14px;
-  margin-top: 6px;
-}
-.song-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.favorite {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: #292938;
-  color: #aaa;
-  font-size: 18px;
-}
-.favorite.active {
-  color: #ff3e91;
-}
-.add-btn {
-  padding: 10px 15px;
-  border-radius: 10px;
-  color: white;
-  background: linear-gradient(135deg, #ff2bd6, #744cff);
-  font-weight: bold;
-}
-.add-btn:hover {
-  filter: brightness(1.15);
-}
-.queue-panel {
-  background: rgba(18, 18, 29, .9);
-  border: 1px solid rgba(255, 255, 255, .08);
-  border-radius: 18px;
-  padding: 20px;
-  height: fit-content;
-  position: sticky;
-  top: 95px;
-}
-.queue-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-.queue-count {
-  color: #aaa;
-  font-size: 13px;
-}
-.queue-list {
-  display: grid;
-  gap: 10px;
-}
-.queue-item {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 11px;
-  border-radius: 12px;
-  background: #20202e;
-}
-.queue-number {
-  width: 28px;
-  color: #8d7aff;
-  font-weight: bold;
-  text-align: center;
-}
-.queue-info {
-  flex: 1;
-  min-width: 0;
-}
-.queue-title {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 14px;
-}
-.queue-artist {
-  font-size: 12px;
-  color: #888;
-  margin-top: 3px;
-}
-.remove-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  color: #888;
-  background: transparent;
-  font-size: 18px;
-}
-.remove-btn:hover {
-  color: #ff4d7d;
-  background: #30303d;
-}
-.empty {
-  color: #777;
-  text-align: center;
-  padding: 30px 10px;
-  font-size: 14px;
-}
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  margin-top: 25px;
-}
-.page-btn {
-  padding: 9px 16px;
-  border-radius: 10px;
-  background: #252537;
-  color: #fff;
-}
-.page-btn:disabled {
-  opacity: .35;
-  cursor: not-allowed;
-}
-.page-info {
-  color: #aaa;
-  font-size: 13px;
-}
-.player {
-  margin-top: 18px;
-  background: linear-gradient(135deg, #251040, #111126);
-  border-radius: 16px;
-  padding: 18px;
-}
-.now-playing {
-  color: #aaa;
-  font-size: 12px;
-  margin-bottom: 5px;
-}
-.current-title {
-  font-size: 17px;
-  font-weight: bold;
-}
-.current-artist {
-  font-size: 13px;
-  color: #888;
-  margin-top: 3px;
-}
-.player-controls {
-  display: flex;
-  gap: 8px;
-  margin-top: 15px;
-}
-.control-btn {
-  flex: 1;
-  height: 40px;
-  border-radius: 10px;
-  background: #29293a;
-  color: white;
-}
-.play-btn {
-  background: linear-gradient(135deg, #ff2bd6, #744cff);
-}
-.volume {
-  width: 100%;
-  margin-top: 12px;
-}
-.volume input {
-  width: 100%;
-}
-audio {
-  width: 100%;
-  margin-top: 12px;
-}
-.toast {
-  position: fixed;
-  left: 50%;
-  bottom: 30px;
-  transform: translateX(-50%) translateY(20px);
-  background: #242435;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 30px;
-  opacity: 0;
-  pointer-events: none;
-  transition: .3s;
-  z-index: 999;
-}
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-@media(max-width: 900px) {
-  .content {
-    grid-template-columns: 1fr;
-  }
-  .queue-panel {
-    position: static;
-  }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KTV 點歌系統</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+      background: radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    header {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      background: rgba(10, 10, 20, .92);
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      background: linear-gradient(90deg, #ff2bd6, #8c5cff, #22d3ee);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .room-info {
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .room-code {
+      color: #fff;
+      font-weight: bold;
+    }
+
+    main {
+      max-width: 1400px;
+      margin: auto;
+      padding: 25px;
+    }
+
+    /* =================================================
+       客戶區
+    ================================================= */
+    .customer-panel {
+      background: linear-gradient(135deg, #171329, #111126);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+
+    .customer-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .customer-form {
+      display: flex;
+      gap: 10px;
+    }
+
+    .customer-form input {
+      flex: 1;
+      height: 46px;
+      border: 1px solid #38384c;
+      border-radius: 12px;
+      background: #151522;
+      color: white;
+      padding: 0 15px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .customer-form input:focus {
+      border-color: #9b5cff;
+    }
+
+    .customer-btn {
+      padding: 0 20px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #22d3ee, #635bff);
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+
+    .customer-status {
+      margin-top: 10px;
+      color: #aaa;
+      font-size: 13px;
+    }
+
+    /* =================================================
+       搜尋
+    ================================================= */
+    .search-area {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .search-box {
+      flex: 1;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      height: 52px;
+      border: 1px solid #38384c;
+      border-radius: 14px;
+      padding: 0 20px 0 48px;
+      background: #151522;
+      color: white;
+      outline: none;
+      font-size: 16px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 18px;
+      top: 15px;
+      font-size: 20px;
+      color: #999;
+    }
+
+    .search-btn {
+      width: 100px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #ff2bd6, #734cff);
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* =================================================
+       分類
+    ================================================= */
+    .categories {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      margin-bottom: 25px;
+      padding-bottom: 5px;
+    }
+
+    .category {
+      flex-shrink: 0;
+      padding: 9px 18px;
+      border-radius: 30px;
+      background: #171725;
+      color: #aaa;
+      border: 1px solid #2d2d3d;
+      cursor: pointer;
+    }
+
+    .category.active {
+      color: white;
+      background: linear-gradient(135deg, #ff2bd6, #744cff);
+      border-color: transparent;
+    }
+
+    /* =================================================
+       主內容
+    ================================================= */
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 25px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 18px;
+    }
+
+    .result-info {
+      color: #888;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .song-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .song {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, .07);
+      background: rgba(25, 25, 38, .75);
+      border-radius: 15px;
+    }
+
+    .cover {
+      width: 64px;
+      height: 64px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 25px;
+      background: linear-gradient(135deg, #ff2bd6, #653eff);
+    }
+
+    .song-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .song-title {
+      font-size: 17px;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .artist {
+      color: #999;
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    .song-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .favorite {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: #292938;
+      color: #aaa;
+      font-size: 18px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .favorite.active {
+      color: #ff3e91;
+    }
+
+    .add-btn {
+      padding: 10px 15px;
+      border-radius: 10px;
+      color: white;
+      background: linear-gradient(135deg, #ff2bd6, #744cff);
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* =================================================
+       右側
+    ================================================= */
+    .queue-panel {
+      background: rgba(18, 18, 29, .9);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 18px;
+      padding: 20px;
+      height: fit-content;
+      position: sticky;
+      top: 95px;
+    }
+
+    /* =================================================
+       歷史歌單
+    ================================================= */
+    .history-panel {
+      margin-bottom: 20px;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 11px;
+      background: #20202e;
+    }
+
+    .history-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .history-title {
+      font-size: 14px;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-artist {
+      color: #888;
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .history-time {
+      color: #666;
+      font-size: 10px;
+      margin-top: 3px;
+    }
+
+    .history-add {
+      padding: 7px 9px;
+      border-radius: 8px;
+      background: #3a315c;
+      color: #fff;
+      font-size: 12px;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* =================================================
+       Queue
+    ================================================= */
+    .queue-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .queue-count {
+      color: #aaa;
+      font-size: 13px;
+    }
+
+    .queue-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .queue-item {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 11px;
+      border-radius: 12px;
+      background: #20202e;
+    }
+
+    .queue-number {
+      width: 28px;
+      color: #8d7aff;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .queue-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .queue-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 14px;
+    }
+
+    .queue-artist {
+      font-size: 12px;
+      color: #888;
+      margin-top: 3px;
+    }
+
+    .remove-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      color: #888;
+      background: transparent;
+      font-size: 18px;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* =================================================
+       Player
+    ================================================= */
+    .player {
+      margin-top: 18px;
+      background: linear-gradient(135deg, #251040, #111126);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .now-playing {
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    .current-title {
+      font-size: 17px;
+      font-weight: bold;
+      margin-top: 5px;
+    }
+
+    .current-artist {
+      font-size: 13px;
+      color: #888;
+      margin-top: 3px;
+    }
+
+    .player-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    .control-btn {
+      flex: 1;
+      height: 40px;
+      border-radius: 10px;
+      background: #29293a;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .play-btn {
+      background: linear-gradient(135deg, #ff2bd6, #744cff);
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    /* =================================================
+       Pagination
+    ================================================= */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 25px;
+    }
+
+    .page-btn {
+      padding: 9px 16px;
+      border-radius: 10px;
+      background: #252537;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .page-btn:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    /* =================================================
+       Empty
+    ================================================= */
+    .empty {
+      color: #777;
+      text-align: center;
+      padding: 30px 10px;
+      font-size: 14px;
+    }
+
+    /* =================================================
+       Toast
+    ================================================= */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 30px;
+      transform: translateX(-50%) translateY(20px);
+      background: #242435;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 30px;
+      opacity: 0;
+      pointer-events: none;
+      transition: .3s;
+      z-index: 999;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media(max-width:900px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+      .queue-panel {
+        position: static;
+      }
+      .customer-form {
+        flex-direction: column;
+      }
+      .customer-btn {
+        height: 45px;
+      }
+    }
+  </style>
 </head>
 <body>
+
 <header>
   <div class="logo">🎤 KTV 點歌系統</div>
-  <div class="room-info">包廂：<span class="room-code">A-208</span></div>
+  <div class="room-info">
+    包廂：<span class="room-code">A-208</span>
+  </div>
 </header>
+
 <main>
+  <!-- 客戶代碼 -->
+  <div class="customer-panel">
+    <div class="customer-title">👤 客戶資料</div>
+    <div class="customer-form">
+      <input type="text" id="customerCode" placeholder="請輸入客戶代碼，例如 A12345" autocomplete="off">
+      <button class="customer-btn" onclick="loadHistory()">載入歷史歌單</button>
+    </div>
+    <div class="customer-status" id="customerStatus">尚未登入客戶</div>
+  </div>
+
+  <!-- 歷史歌單 -->
+  <div class="history-panel" id="historyPanel" style="display:none;">
+    <div class="section-title">📜 歷史歌單</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
   <!-- 搜尋 -->
   <div class="search-area">
     <div class="search-box">
@@ -397,23 +583,21 @@ audio {
   </div>
 
   <div class="content">
-    <!-- 歌曲列表 -->
+    <!-- 歌曲 -->
     <section>
       <div class="section-title">🎵 雲端歌曲列表</div>
       <div class="result-info" id="resultInfo">請輸入歌名、歌手或歌號</div>
       <div class="song-list" id="songList">
         <div class="empty">🔍 請輸入關鍵字開始搜尋</div>
       </div>
-
-      <!-- 分頁 -->
       <div class="pagination">
         <button class="page-btn" id="prevBtn" onclick="changePage(-1)" disabled>← 上一頁</button>
-        <span class="page-info" id="pageInfo">-</span>
+        <span id="pageInfo">-</span>
         <button class="page-btn" id="nextBtn" onclick="changePage(1)" disabled>下一頁 →</button>
       </div>
     </section>
 
-    <!-- 待播清單 -->
+    <!-- 待播 -->
     <aside class="queue-panel">
       <div class="queue-header">
         <div class="section-title">📋 待播歌曲</div>
@@ -421,7 +605,7 @@ audio {
       </div>
       <div class="queue-list" id="queueList"></div>
 
-      <!-- 播放器 -->
+      <!-- Player -->
       <div class="player">
         <div class="now-playing">NOW PLAYING</div>
         <div class="current-title" id="currentTitle">尚未播放</div>
@@ -431,9 +615,6 @@ audio {
           <button class="control-btn play-btn" onclick="playCurrent()">▶ 播放</button>
           <button class="control-btn" onclick="nextSong()">⏭ 下一首</button>
         </div>
-        <div class="volume">
-          <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8">
-        </div>
       </div>
     </aside>
   </div>
@@ -442,324 +623,380 @@ audio {
 <div class="toast" id="toast"></div>
 
 <script>
-// API 設定
-const API_URL = "https://script.google.com/macros/s/AKfycbz6iuaOIqfTfXpZEZKc5XhUfG_l5pQjkSIZAfypwn3FdO0gFfCUGMrR6bP7BVtyWhqkAg/exec";
-const PAGE_SIZE = 30;
+  // API
+  const API_URL = "https://script.google.com/macros/s/AKfycbzqfNyw6wxHaAwSUlUNXedQb3u23p8hsGAhE9KRZiU_DJuDkY30etbREeUFCWLhnjASSQ/exec";
+  const PAGE_SIZE = 30;
 
-// 狀態
-let allSongs = [];
-let currentLanguage = "全部";
-let currentPage = 1;
-let totalResults = 0;
-let hasMore = false;
-let queue = JSON.parse(localStorage.getItem("ktvQueue")) || [];
-let favorites = JSON.parse(localStorage.getItem("ktvFavorites")) || [];
-let currentSong = null;
+  // 狀態
+  let currentCustomerCode = "";
+  let currentLanguage = "全部";
+  let currentPage = 1;
+  let hasMore = false;
+  let allSongs = [];
+  let queue = JSON.parse(localStorage.getItem("ktvQueue")) || [];
+  let favorites = JSON.parse(localStorage.getItem("ktvFavorites")) || [];
+  let currentSong = null;
 
-// 搜尋
-async function searchSongs(page = 1) {
-  const input = document.getElementById("searchInput");
-  const keyword = input.value.trim();
+  // 客戶代碼
+  async function loadHistory() {
+    const input = document.getElementById("customerCode");
+    const code = input.value.trim();
 
-  if (!keyword) {
-    document.getElementById("songList").innerHTML = `
-      <div class="empty">🔍 請輸入關鍵字開始搜尋</div>
-    `;
-    document.getElementById("resultInfo").textContent = "請輸入歌名、歌手或歌號";
-    updatePagination(1, 0, false);
-    return;
-  }
-
-  currentPage = page;
-
-  const params = new URLSearchParams();
-  params.set("q", keyword);
-  params.set("language", currentLanguage);
-  params.set("page", currentPage);
-  params.set("limit", PAGE_SIZE);
-
-  const list = document.getElementById("songList");
-  list.innerHTML = `<div class="empty">🔍 搜尋中...</div>`;
-
-  try {
-    const response = await fetch(`${API_URL}?${params.toString()}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || "API 發生錯誤");
-    }
-
-    allSongs = result.data || [];
-    totalResults = Number(result.total || 0);
-    hasMore = Boolean(result.hasMore);
-
-    renderSongList();
-    updatePagination(result.page, result.total, result.hasMore);
-  } catch (error) {
-    console.error(error);
-    list.innerHTML = `<div class="empty">❌ 無法取得歌曲資料</div>`;
-    showToast("無法連線至雲端歌單");
-  }
-}
-
-// 顯示歌曲
-function renderSongList() {
-  const list = document.getElementById("songList");
-
-  if (!allSongs || allSongs.length === 0) {
-    list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
-    return;
-  }
-
-  list.innerHTML = allSongs.map(song => {
-    const songNo = String(song["歌號"] || "");
-    const title = String(song["歌名"] || "");
-    const artist = String(song["歌手"] || "");
-    const language = String(song["語言"] || "");
-    const brand = String(song["品牌"] || "");
-    const isFavorite = favorites.includes(songNo);
-
-    return `
-      <div class="song">
-        <div class="cover">🎤</div>
-        <div class="song-info">
-          <div class="song-title">[${escapeHtml(songNo)}] ${escapeHtml(title)}</div>
-          <div class="artist">${escapeHtml(artist)} · ${escapeHtml(language || "未分類")}${brand ? ` · ${escapeHtml(brand)}` : ""}</div>
-        </div>
-        <div class="song-actions">
-          <button class="favorite ${isFavorite ? "active" : ""}" onclick="toggleFavorite('${escapeJs(songNo)}')">${isFavorite ? "♥" : "♡"}</button>
-          <button class="add-btn" onclick="addSong('${escapeJs(songNo)}')">＋ 點歌</button>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-// 分頁
-function updatePagination(page, total, more) {
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  document.getElementById("pageInfo").textContent = total > 0 ? `${page} / ${totalPages}` : "-";
-  document.getElementById("prevBtn").disabled = page <= 1;
-  document.getElementById("nextBtn").disabled = !more;
-  document.getElementById("resultInfo").textContent = total > 0 ? `找到 ${total} 首歌曲` : "找不到符合的歌曲";
-}
-
-// 上一頁 / 下一頁
-function changePage(direction) {
-  const newPage = currentPage + direction;
-  if (newPage < 1) return;
-  if (direction > 0 && !hasMore) return;
-  searchSongs(newPage);
-}
-
-// 語言
-function filterLanguage(language, button) {
-  currentLanguage = language;
-  document.querySelectorAll(".category").forEach(btn => {
-    btn.classList.remove("active");
-  });
-  button.classList.add("active");
-
-  const keyword = document.getElementById("searchInput").value.trim();
-  if (keyword) {
-    searchSongs(1);
-  }
-}
-
-// Enter 搜尋
-document.getElementById("searchInput").addEventListener("keydown", function(event) {
-  if (event.key === "Enter") {
-    searchSongs(1);
-  }
-});
-
-// 即時搜尋
-let searchTimer = null;
-document.getElementById("searchInput").addEventListener("input", function() {
-  clearTimeout(searchTimer);
-  const keyword = this.value.trim();
-
-  if (!keyword) {
-    document.getElementById("songList").innerHTML = `<div class="empty">🔍 請輸入關鍵字開始搜尋</div>`;
-    document.getElementById("resultInfo").textContent = "請輸入歌名、歌手或歌號";
-    updatePagination(1, 0, false);
-    return;
-  }
-
-  searchTimer = setTimeout(() => searchSongs(1), 700);
-});
-
-// 點歌
-function addSong(songNo) {
-  const song = allSongs.find(s => String(s["歌號"]) === String(songNo));
-  if (!song) {
-    showToast("找不到歌曲");
-    return;
-  }
-
-  queue.push({
-    id: String(song["歌號"]),
-    品牌: song["品牌"],
-    歌號: song["歌號"],
-    歌名: song["歌名"],
-    歌手: song["歌手"],
-    語言: song["語言"],
-    分類: song["分類"],
-    queueId: Date.now() + Math.random()
-  });
-
-  saveQueue();
-  renderQueue();
-  showToast(`已點歌：${song["歌名"]}`);
-}
-
-// 待播清單
-function renderQueue() {
-  const list = document.getElementById("queueList");
-  const count = document.getElementById("queueCount");
-
-  count.textContent = `${queue.length} 首`;
-
-  if (queue.length === 0) {
-    list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>選擇歌曲開始點歌吧 🎤</div>`;
-    return;
-  }
-
-  list.innerHTML = queue.map((song, index) => `
-    <div class="queue-item">
-      <div class="queue-number">${index + 1}</div>
-      <div class="queue-info">
-        <div class="queue-title">[${escapeHtml(song["歌號"])}] ${escapeHtml(song["歌名"])}</div>
-        <div class="queue-artist">${escapeHtml(song["歌手"])}</div>
-      </div>
-      <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
-    </div>
-  `).join("");
-}
-
-// 移除歌曲
-function removeSong(queueId) {
-  queue = queue.filter(song => song.queueId !== queueId);
-  saveQueue();
-  renderQueue();
-  showToast("已移除歌曲");
-}
-
-// 播放
-function playCurrent() {
-  if (!currentSong) {
-    if (queue.length === 0) {
-      showToast("目前沒有待播歌曲");
+    if (!code) {
+      showToast("請輸入客戶代碼");
       return;
     }
-    currentSong = queue[0];
+
+    currentCustomerCode = code;
+    const status = document.getElementById("customerStatus");
+    status.textContent = `正在載入 ${code} 的歷史歌單...`;
+
+    try {
+      const url = `${API_URL}?action=history&customerCode=` + encodeURIComponent(code);
+      const response = await fetch(url);
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      status.textContent = `目前客戶：${code} 歷史紀錄 ${result.total} 首`;
+      renderHistory(result.data || []);
+    } catch (error) {
+      console.error(error);
+      status.textContent = "載入歷史歌單失敗";
+      showToast("無法取得歷史歌單");
+    }
   }
 
-  const player = document.getElementById("audioPlayer");
-  player.src = `music/${encodeURIComponent(currentSong["歌號"])}.mp3`;
+  // 顯示歷史
+  function renderHistory(history) {
+    const panel = document.getElementById("historyPanel");
+    const list = document.getElementById("historyList");
+    panel.style.display = "block";
 
-  document.getElementById("currentTitle").textContent = `[${currentSong["歌號"]}] ${currentSong["歌名"]}`;
-  document.getElementById("currentArtist").textContent = currentSong["歌手"];
+    if (history.length === 0) {
+      list.innerHTML = `<div class="empty">🎵 這位客戶還沒有歷史歌單</div>`;
+      return;
+    }
 
-  player.play().catch(() => {
-    showToast("找不到音樂檔案");
+    list.innerHTML = history.map((song, index) => `
+      <div class="history-item">
+        <div class="history-info">
+          <div class="history-title">[${escapeHtml(song["歌號"])}] ${escapeHtml(song["歌名"])}</div>
+          <div class="history-artist">${escapeHtml(song["歌手"])} · ${escapeHtml(song["品牌"])}</div>
+          <div class="history-time">${escapeHtml(song["點歌時間"])} ${song["包廂"] ? " · " + escapeHtml(song["包廂"]) : ""}</div>
+        </div>
+        <button class="history-add" onclick="addHistorySong(${index})">＋ 再唱</button>
+      </div>
+    `).join("");
+
+    window.currentHistory = history;
+  }
+
+  // 從歷史歌單再次點歌
+  function addHistorySong(index) {
+    const history = window.currentHistory || [];
+    const song = history[index];
+    if (!song) return;
+
+    addToQueue({
+      "品牌": song["品牌"],
+      "歌號": song["歌號"],
+      "歌名": song["歌名"],
+      "歌手": song["歌手"],
+      "語言": "",
+      "分類": ""
+    });
+
+    recordHistory(song);
+  }
+
+  // 搜尋歌曲
+  async function searchSongs(page = 1) {
+    const keyword = document.getElementById("searchInput").value.trim();
+
+    if (!keyword) {
+      document.getElementById("songList").innerHTML = `<div class="empty">🔍 請輸入關鍵字開始搜尋</div>`;
+      return;
+    }
+
+    currentPage = page;
+    const params = new URLSearchParams();
+    params.set("action", "search");
+    params.set("q", keyword);
+    params.set("language", currentLanguage);
+    params.set("page", page);
+    params.set("limit", PAGE_SIZE);
+
+    document.getElementById("songList").innerHTML = `<div class="empty">🔍 搜尋中...</div>`;
+
+    try {
+      const response = await fetch(`${API_URL}?${params.toString()}`);
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      allSongs = result.data || [];
+      hasMore = result.hasMore;
+      renderSongs();
+      updatePagination(result.page, result.total, result.hasMore);
+    } catch (error) {
+      console.error(error);
+      showToast("搜尋歌曲失敗");
+    }
+  }
+
+  // 顯示搜尋結果
+  function renderSongs() {
+    const list = document.getElementById("songList");
+
+    if (allSongs.length === 0) {
+      list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
+      return;
+    }
+
+    list.innerHTML = allSongs.map((song, index) => {
+      const songNo = String(song["歌號"] || "");
+      const title = String(song["歌名"] || "");
+      const artist = String(song["歌手"] || "");
+      const language = String(song["語言"] || "");
+      const brand = String(song["品牌"] || "");
+      const favorite = favorites.includes(songNo);
+
+      return `
+        <div class="song">
+          <div class="cover">🎤</div>
+          <div class="song-info">
+            <div class="song-title">[${escapeHtml(songNo)}] ${escapeHtml(title)}</div>
+            <div class="artist">${escapeHtml(artist)} · ${escapeHtml(language)} · ${escapeHtml(brand)}</div>
+          </div>
+          <div class="song-actions">
+            <button class="favorite ${favorite ? "active" : ""}" onclick="toggleFavorite('${escapeJs(songNo)}')">
+              ${favorite ? "♥" : "♡"}
+            </button>
+            <button class="add-btn" onclick="addSong(${index})">＋ 點歌</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // 點歌
+  function addSong(index) {
+    const song = allSongs[index];
+    if (!song) return;
+
+    addToQueue(song);
+    if (currentCustomerCode) {
+      recordHistory(song);
+    }
+  }
+
+  // 加入待播
+  function addToQueue(song) {
+    queue.push({
+      "品牌": song["品牌"],
+      "歌號": song["歌號"],
+      "歌名": song["歌名"],
+      "歌手": song["歌手"],
+      "語言": song["語言"],
+      "分類": song["分類"],
+      queueId: Date.now() + Math.random()
+    });
+
+    saveQueue();
+    renderQueue();
+    showToast(`已點歌：${song["歌名"]}`);
+  }
+
+  // 記錄歷史
+  async function recordHistory(song) {
+    if (!currentCustomerCode) return;
+
+    try {
+      const params = new URLSearchParams();
+      params.set("action", "addHistory");
+      params.set("customerCode", currentCustomerCode);
+      params.set("songNo", song["歌號"] || "");
+      params.set("songTitle", song["歌名"] || "");
+      params.set("artist", song["歌手"] || "");
+      params.set("brand", song["品牌"] || "");
+      params.set("room", getRoomCode());
+
+      await fetch(`${API_URL}?${params.toString()}`);
+    } catch (error) {
+      console.error("歷史紀錄失敗", error);
+    }
+  }
+
+  // 包廂
+  function getRoomCode() {
+    const element = document.querySelector(".room-code");
+    return element ? element.textContent.trim() : "";
+  }
+
+  // 待播
+  function renderQueue() {
+    const list = document.getElementById("queueList");
+    const count = document.getElementById("queueCount");
+    count.textContent = `${queue.length} 首`;
+
+    if (queue.length === 0) {
+      list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>選擇歌曲開始點歌吧 🎤</div>`;
+      return;
+    }
+
+    list.innerHTML = queue.map((song, index) => `
+      <div class="queue-item">
+        <div class="queue-number">${index + 1}</div>
+        <div class="queue-info">
+          <div class="queue-title">[${escapeHtml(song["歌號"])}] ${escapeHtml(song["歌名"])}</div>
+          <div class="queue-artist">${escapeHtml(song["歌手"])}</div>
+        </div>
+        <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
+      </div>
+    `).join("");
+  }
+
+  // 移除
+  function removeSong(queueId) {
+    queue = queue.filter(song => song.queueId !== queueId);
+    saveQueue();
+    renderQueue();
+  }
+
+  // 儲存
+  function saveQueue() {
+    localStorage.setItem("ktvQueue", JSON.stringify(queue));
+  }
+
+  // 播放
+  function playCurrent() {
+    if (!currentSong) {
+      if (queue.length === 0) {
+        showToast("目前沒有待播歌曲");
+        return;
+      }
+      currentSong = queue[0];
+    }
+
+    const player = document.getElementById("audioPlayer");
+    player.src = `music/${encodeURIComponent(currentSong["歌號"])}.mp3`;
+    document.getElementById("currentTitle").textContent = `[${currentSong["歌號"]}] ${currentSong["歌名"]}`;
+    document.getElementById("currentArtist").textContent = currentSong["歌手"];
+    
+    player.play().catch(() => {
+      showToast("找不到音樂檔案");
+    });
+  }
+
+  // 下一首
+  function nextSong() {
+    if (queue.length === 0) {
+      currentSong = null;
+      return;
+    }
+
+    queue.shift();
+    currentSong = queue[0] || null;
+    saveQueue();
+    renderQueue();
+
+    if (currentSong) {
+      playCurrent();
+    }
+  }
+
+  // 語言
+  function filterLanguage(language, button) {
+    currentLanguage = language;
+    document.querySelectorAll(".category").forEach(btn => btn.classList.remove("active"));
+    button.classList.add("active");
+
+    const keyword = document.getElementById("searchInput").value.trim();
+    if (keyword) {
+      searchSongs(1);
+    }
+  }
+
+  // Enter
+  document.getElementById("searchInput").addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      searchSongs(1);
+    }
   });
-}
 
-// 下一首
-function nextSong() {
-  if (queue.length === 0) {
-    currentSong = null;
-    document.getElementById("currentTitle").textContent = "尚未播放";
-    document.getElementById("currentArtist").textContent = "-";
-    document.getElementById("audioPlayer").removeAttribute("src");
-    return;
+  // 收藏
+  function toggleFavorite(songNo) {
+    songNo = String(songNo);
+    if (favorites.includes(songNo)) {
+      favorites = favorites.filter(item => String(item) !== songNo);
+    } else {
+      favorites.push(songNo);
+    }
+
+    localStorage.setItem("ktvFavorites", JSON.stringify(favorites));
+    renderSongs();
   }
 
-  queue.shift();
-  currentSong = queue[0] || null;
+  // 分頁
+  function changePage(direction) {
+    const page = currentPage + direction;
+    if (page < 1) return;
+    if (direction > 0 && !hasMore) return;
+    searchSongs(page);
+  }
 
-  saveQueue();
+  function updatePagination(page, total, more) {
+    document.getElementById("pageInfo").textContent = total > 0 ? `第 ${page} 頁` : "-";
+    document.getElementById("prevBtn").disabled = page <= 1;
+    document.getElementById("nextBtn").disabled = !more;
+    document.getElementById("resultInfo").textContent = total > 0 ? `找到 ${total} 首歌曲` : "找不到符合的歌曲";
+  }
+
+  // Toast
+  let toastTimer;
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove("show");
+    }, 2000);
+  }
+
+  // Escape
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function escapeJs(value) {
+    return String(value ?? "")
+      .replace(/\\/g, "\\\\")
+      .replace(/'/g, "\\'")
+      .replace(/"/g, '\\"');
+  }
+
+  // 初始化
   renderQueue();
+  document.getElementById("audioPlayer").volume = .8;
 
-  if (currentSong) {
-    playCurrent();
-  } else {
-    document.getElementById("currentTitle").textContent = "尚未播放";
-    document.getElementById("currentArtist").textContent = "-";
-  }
-}
-
-// 播放完成
-document.getElementById("audioPlayer").addEventListener("ended", () => {
-  nextSong();
-});
-
-// 音量
-document.getElementById("volume").addEventListener("input", function() {
-  document.getElementById("audioPlayer").volume = Number(this.value);
-});
-
-// 收藏
-function toggleFavorite(songNo) {
-  songNo = String(songNo);
-
-  if (favorites.includes(songNo)) {
-    favorites = favorites.filter(item => String(item) !== songNo);
-    showToast("已取消收藏");
-  } else {
-    favorites.push(songNo);
-    showToast("已加入收藏");
-  }
-
-  localStorage.setItem("ktvFavorites", JSON.stringify(favorites));
-  renderSongList();
-}
-
-// 儲存待播
-function saveQueue() {
-  localStorage.setItem("ktvQueue", JSON.stringify(queue));
-}
-
-// Toast
-let toastTimer;
-function showToast(message) {
-  const toast = document.getElementById("toast");
-  toast.textContent = message;
-  toast.classList.add("show");
-
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toast.classList.remove("show");
-  }, 2000);
-}
-
-// HTML Escape
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// JavaScript Escape
-function escapeJs(value) {
-  return String(value ?? "")
-    .replace(/\\/g, "\\\\")
-    .replace(/'/g, "\\'")
-    .replace(/"/g, '\\"')
-    .replace(/\r/g, "\\r")
-    .replace(/\n/g, "\\n");
-}
-
-// 初始化
-renderQueue();
-document.getElementById("audioPlayer").volume = 0.8;
+  // 客戶代碼按 Enter
+  document.getElementById("customerCode").addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      loadHistory();
+    }
+  });
 </script>
+
 </body>
 </html>
