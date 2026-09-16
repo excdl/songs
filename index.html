@@ -16,15 +16,14 @@ body {
   color: white;
   min-height: 100vh;
 }
-/* HEADER */
 header {
   height: 72px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 30px;
-  background: rgba(10, 10, 20, .92);
-  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(10,10,20,.92);
+  border-bottom: 1px solid rgba(255,255,255,.08);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -37,39 +36,69 @@ header {
   -webkit-background-clip: text;
   color: transparent;
 }
-/* 客戶區 */
-.customer-area {
+.header-buttons {
   display: flex;
-  align-items: center;
   gap: 10px;
 }
-.current-customer {
-  padding: 9px 14px;
-  border-radius: 10px;
-  background: #20202e;
-  color: #ddd;
-  font-size: 14px;
-}
-.customer-btn {
+.header-btn {
+  border: 1px solid #38384c;
+  background: #171725;
+  color: white;
   padding: 10px 15px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #ff2bd6, #744cff);
-  color: white;
-  font-weight: bold;
-  border: none;
   cursor: pointer;
 }
-/* MAIN */
+.header-btn:hover {
+  background: #29293d;
+}
+.room-info {
+  color: #aaa;
+  font-size: 14px;
+}
+.room-code {
+  color: white;
+  font-weight: bold;
+}
 main {
   max-width: 1400px;
   margin: auto;
   padding: 25px;
 }
-/* 搜尋 */
+.customer-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 15px;
+  background: rgba(25,25,38,.8);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.customer-info {
+  flex: 1;
+}
+.customer-name {
+  font-weight: bold;
+  font-size: 16px;
+}
+.customer-code {
+  color: #999;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.customer-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 15px;
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
 .search-area {
   display: flex;
   gap: 12px;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
 }
 .search-box {
   flex: 1;
@@ -99,10 +128,10 @@ main {
   background: linear-gradient(135deg, #ff2bd6, #734cff);
   color: white;
   font-weight: bold;
+  font-size: 15px;
   border: none;
   cursor: pointer;
 }
-/* 分類 */
 .categories {
   display: flex;
   gap: 10px;
@@ -124,7 +153,6 @@ main {
   background: linear-gradient(135deg, #ff2bd6, #744cff);
   border-color: transparent;
 }
-/* CONTENT */
 .content {
   display: grid;
   grid-template-columns: 1fr 380px;
@@ -135,7 +163,6 @@ main {
   font-weight: bold;
   margin-bottom: 18px;
 }
-/* SONG */
 .song-list {
   display: grid;
   gap: 12px;
@@ -145,8 +172,8 @@ main {
   align-items: center;
   gap: 15px;
   padding: 14px;
-  border: 1px solid rgba(255, 255, 255, .07);
-  background: rgba(25, 25, 38, .75);
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(25,25,38,.75);
   border-radius: 15px;
 }
 .cover {
@@ -203,10 +230,9 @@ main {
   border: none;
   cursor: pointer;
 }
-/* QUEUE */
 .queue-panel {
-  background: rgba(18, 18, 29, .9);
-  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(18,18,29,.9);
+  border: 1px solid rgba(255,255,255,.08);
   border-radius: 18px;
   padding: 20px;
   height: fit-content;
@@ -262,11 +288,10 @@ main {
   border-radius: 8px;
   color: #888;
   background: transparent;
-  font-size: 18px;
   border: none;
+  font-size: 18px;
   cursor: pointer;
 }
-/* PLAYER */
 .player {
   margin-top: 18px;
   background: linear-gradient(135deg, #251040, #111126);
@@ -287,10 +312,6 @@ main {
   color: #888;
   margin-top: 3px;
 }
-audio {
-  width: 100%;
-  margin-top: 12px;
-}
 .player-controls {
   display: flex;
   gap: 8px;
@@ -308,50 +329,41 @@ audio {
 .play-btn {
   background: linear-gradient(135deg, #ff2bd6, #744cff);
 }
-/* MODAL */
+audio {
+  width: 100%;
+  margin-top: 12px;
+}
+.empty {
+  color: #777;
+  text-align: center;
+  padding: 30px 10px;
+  font-size: 14px;
+}
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .72);
+  background: rgba(0,0,0,.65);
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  z-index: 999;
 }
 .modal.show {
   display: flex;
 }
 .modal-box {
-  width: 100%;
-  max-width: 500px;
-  background: #171722;
-  border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 20px;
+  width: 90%;
+  max-width: 480px;
+  background: #181824;
+  border: 1px solid #38384c;
+  border-radius: 18px;
   padding: 25px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, .6);
-}
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
 }
 .modal-title {
-  font-size: 21px;
-  font-weight: bold;
-}
-.close-btn {
-  width: 35px;
-  height: 35px;
-  border-radius: 8px;
-  background: #292938;
-  color: white;
   font-size: 20px;
-  border: none;
-  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 20px;
 }
-/* INPUT */
 .form-group {
   margin-bottom: 15px;
 }
@@ -359,89 +371,67 @@ audio {
   display: block;
   color: #aaa;
   font-size: 13px;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
 }
 .form-group input {
   width: 100%;
   height: 44px;
   border: 1px solid #38384c;
-  border-radius: 10px;
   background: #10101a;
   color: white;
+  border-radius: 10px;
   padding: 0 12px;
   outline: none;
 }
-.modal-actions {
+.modal-buttons {
   display: flex;
   gap: 10px;
   margin-top: 20px;
 }
-.modal-actions button {
+.modal-buttons button {
   flex: 1;
   height: 44px;
   border-radius: 10px;
-  color: white;
   border: none;
   cursor: pointer;
 }
-.primary-btn {
+.primary {
+  color: white;
   background: linear-gradient(135deg, #ff2bd6, #744cff);
 }
-.secondary-btn {
+.secondary {
   background: #292938;
+  color: white;
 }
-/* 客戶資訊 */
+.customer-results {
+  margin-top: 15px;
+  display: grid;
+  gap: 8px;
+}
 .customer-result {
-  display: none;
-  margin-top: 20px;
-  padding: 16px;
-  border-radius: 14px;
-  background: #20202e;
+  padding: 12px;
+  border-radius: 10px;
+  background: #252534;
+  cursor: pointer;
 }
-.customer-result.show {
-  display: block;
-}
-.customer-name {
-  font-size: 18px;
-  font-weight: bold;
-}
-.customer-code {
-  color: #9d8cff;
-  margin-top: 5px;
-}
-.customer-info {
-  color: #999;
-  font-size: 13px;
-  margin-top: 8px;
+.customer-result:hover {
+  background: #34344a;
 }
 .history-list {
   margin-top: 15px;
-  max-height: 250px;
+  max-height: 300px;
   overflow-y: auto;
+  display: grid;
+  gap: 8px;
 }
 .history-item {
-  padding: 9px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, .06);
+  padding: 10px;
+  border-radius: 10px;
+  background: #222231;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
-.history-title {
-  font-size: 14px;
-  font-weight: bold;
-}
-.history-artist {
-  font-size: 12px;
-  color: #888;
-}
-.history-btn {
-  margin-top: 12px;
-  width: 100%;
-  height: 40px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #ff2bd6, #744cff);
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-/* TOAST */
 .toast {
   position: fixed;
   left: 50%;
@@ -454,7 +444,7 @@ audio {
   opacity: 0;
   pointer-events: none;
   transition: .3s;
-  z-index: 2000;
+  z-index: 9999;
 }
 .toast.show {
   opacity: 1;
@@ -467,39 +457,32 @@ audio {
   .queue-panel {
     position: static;
   }
-  header {
-    padding: 0 15px;
-  }
-  .logo {
-    font-size: 18px;
-  }
-  .current-customer {
-    display: none;
-  }
 }
 </style>
 </head>
 <body>
-
 <header>
   <div class="logo">🎤 KTV 點歌系統</div>
-  <div class="customer-area">
-    <div class="current-customer" id="currentCustomer">客戶：未選擇</div>
-    <button class="customer-btn" onclick="openCustomerModal()">👤 客戶管理</button>
+  <div class="header-buttons">
+    <button class="header-btn" onclick="openCustomerModal()">👤 新增／搜尋客戶</button>
   </div>
+  <div class="room-info">包廂：<span class="room-code">A-208</span></div>
 </header>
-
 <main>
-  <!-- 搜尋 -->
+  <div class="customer-bar">
+    <div class="customer-info">
+      <div class="customer-name" id="customerName">尚未選擇客戶</div>
+      <div class="customer-code" id="customerCode">點擊「新增／搜尋客戶」</div>
+    </div>
+    <button class="customer-btn" onclick="openCustomerModal()">客戶</button>
+  </div>
   <div class="search-area">
     <div class="search-box">
       <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="輸入歌名、歌手或編號搜尋...">
+      <input type="text" id="searchInput" placeholder="輸入歌名、歌手或歌號搜尋...">
     </div>
     <button class="search-btn" onclick="fetchSongs()">搜尋</button>
   </div>
-
-  <!-- 語言 -->
   <div class="categories">
     <button class="category active" onclick="filterLanguage('全部',this)">全部</button>
     <button class="category" onclick="filterLanguage('國語',this)">國語</button>
@@ -508,17 +491,13 @@ audio {
     <button class="category" onclick="filterLanguage('英文',this)">英文</button>
     <button class="category" onclick="filterLanguage('日文',this)">日文</button>
   </div>
-
   <div class="content">
-    <!-- 歌曲 -->
     <section>
       <div class="section-title">🎵 雲端歌曲列表</div>
       <div class="song-list" id="songList">
-        <div class="empty">請搜尋歌曲</div>
+        <div class="empty">請輸入關鍵字搜尋歌曲</div>
       </div>
     </section>
-
-    <!-- 待播 -->
     <aside class="queue-panel">
       <div class="queue-header">
         <div class="section-title">📋 待播歌曲</div>
@@ -538,279 +517,70 @@ audio {
     </aside>
   </div>
 </main>
-
-<!-- 客戶管理 Modal -->
 <div class="modal" id="customerModal">
   <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title">👤 客戶管理</div>
-      <button class="close-btn" onclick="closeCustomerModal()">×</button>
-    </div>
-
-    <!-- 搜尋客戶 -->
+    <div class="modal-title">👤 客戶管理</div>
     <div class="form-group">
-      <label>客戶代碼</label>
-      <input id="customerCodeInput" placeholder="例如：C000001">
+      <label>搜尋客戶代碼／姓名／電話</label>
+      <input type="text" id="customerSearch" placeholder="例如 C000001 或 王先生">
     </div>
-    <div class="modal-actions">
-      <button class="secondary-btn" onclick="searchCustomer()">🔍 搜尋客戶</button>
-      <button class="primary-btn" onclick="showAddCustomerForm()">＋ 新增客戶</button>
+    <div class="customer-results" id="customerResults"></div>
+    <hr style="border-color:#30303d; margin:20px 0;">
+    <div class="modal-title">➕ 新增客戶</div>
+    <div class="form-group">
+      <label>客戶名稱</label>
+      <input id="newCustomerName" placeholder="例如：王先生">
     </div>
-
-    <!-- 客戶結果 -->
-    <div class="customer-result" id="customerResult">
-      <div class="customer-name" id="resultName"></div>
-      <div class="customer-code" id="resultCode"></div>
-      <div class="customer-info" id="resultInfo"></div>
-      <button class="history-btn" onclick="loadHistory()">📋 載入歷史歌單</button>
-      <button class="history-btn" onclick="selectCustomer()">✓ 使用此客戶</button>
-      <div class="history-list" id="historyList"></div>
+    <div class="form-group">
+      <label>電話</label>
+      <input id="newCustomerPhone" placeholder="電話">
     </div>
-
-    <!-- 新增客戶表單 -->
-    <div id="addCustomerForm" style="display:none;margin-top:20px;">
-      <div class="form-group">
-        <label>客戶名稱</label>
-        <input id="newCustomerName" placeholder="請輸入客戶名稱">
-      </div>
-      <div class="form-group">
-        <label>電話</label>
-        <input id="newCustomerPhone" placeholder="請輸入電話">
-      </div>
-      <div class="form-group">
-        <label>備註</label>
-        <input id="newCustomerNote" placeholder="例如 VIP">
-      </div>
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick="hideAddCustomerForm()">取消</button>
-        <button class="primary-btn" onclick="addCustomer()">建立客戶</button>
-      </div>
+    <div class="form-group">
+      <label>備註</label>
+      <input id="newCustomerNote" placeholder="備註">
+    </div>
+    <div class="modal-buttons">
+      <button class="secondary" onclick="closeCustomerModal()">關閉</button>
+      <button class="primary" onclick="createCustomer()">建立客戶</button>
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
-
 <script>
-/****************************************************
- * API
- ****************************************************/
-const API_URL = "https://script.google.com/macros/s/AKfycbwAIpHrDsCz0E7rJfQ62m8rcx5mO-PChrKXhWQAQtgGNE7oouoBDim5V4LewGTJPZ_RDw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzj14gtjjgWnF-9ispT2fsB7N8jXxclmZoVKWMeo-ypToR-T9QpmYXO7kUgiuKmhaiK3w/exec";
 
-/****************************************************
- * 全域變數
- ****************************************************/
 let allSongs = [];
 let currentLanguage = "全部";
-let currentCustomer = JSON.parse(localStorage.getItem("ktvCustomer")) || null;
 let queue = JSON.parse(localStorage.getItem("ktvQueue")) || [];
 let favorites = JSON.parse(localStorage.getItem("ktvFavorites")) || [];
 let currentSong = null;
+let currentCustomer = JSON.parse(localStorage.getItem("ktvCustomer")) || null;
 
-/****************************************************
- * 初始化
- ****************************************************/
 window.addEventListener("DOMContentLoaded", () => {
-  updateCustomerUI();
+  renderCustomer();
   renderQueue();
+  fetchSongs();
 });
 
-/****************************************************
- * 客戶 Modal
- ****************************************************/
-function openCustomerModal() {
-  document.getElementById("customerModal").classList.add("show");
-  document.getElementById("customerCodeInput").focus();
-}
-
-function closeCustomerModal() {
-  document.getElementById("customerModal").classList.remove("show");
-}
-
-/****************************************************
- * 搜尋客戶
- ****************************************************/
-async function searchCustomer() {
-  const code = document.getElementById("customerCodeInput").value.trim();
-  if (!code) {
-    showToast("請輸入客戶代碼");
-    return;
-  }
-
-  try {
-    const response = await fetch(API_URL + "?action=customer&code=" + encodeURIComponent(code));
-    const result = await response.json();
-
-    if (!result.found) {
-      showToast("找不到此客戶");
-      document.getElementById("customerResult").classList.remove("show");
-      return;
-    }
-
-    const customer = result.customer;
-    window.searchCustomerData = customer;
-
-    document.getElementById("resultName").textContent = customer["客戶名稱"];
-    document.getElementById("resultCode").textContent = customer["客戶代碼"];
-    document.getElementById("resultInfo").textContent = "電話：" + (customer["電話"] || "-");
-    document.getElementById("customerResult").classList.add("show");
-    document.getElementById("historyList").innerHTML = "";
-
-    showToast("找到客戶：" + customer["客戶名稱"]);
-  } catch(error) {
-    console.error(error);
-    showToast("搜尋客戶失敗");
-  }
-}
-
-/****************************************************
- * 選擇客戶
- ****************************************************/
-function selectCustomer() {
-  const customer = window.searchCustomerData;
-  if (!customer) return;
-
-  currentCustomer = {
-    code: customer["客戶代碼"],
-    name: customer["客戶名稱"],
-    phone: customer["電話"] || "",
-    note: customer["備註"] || ""
-  };
-
-  localStorage.setItem("ktvCustomer", JSON.stringify(currentCustomer));
-  updateCustomerUI();
-  closeCustomerModal();
-  showToast("目前客戶：" + currentCustomer.name);
-}
-
-/****************************************************
- * 更新目前客戶
- ****************************************************/
-function updateCustomerUI() {
-  const el = document.getElementById("currentCustomer");
-  if (!currentCustomer) {
-    el.textContent = "客戶：未選擇";
-    return;
-  }
-  el.textContent = "👤 " + currentCustomer.name + " (" + currentCustomer.code + ")";
-}
-
-/****************************************************
- * 顯示/隱藏 新增客戶表單
- ****************************************************/
-function showAddCustomerForm() {
-  document.getElementById("addCustomerForm").style.display = "block";
-}
-
-function hideAddCustomerForm() {
-  document.getElementById("addCustomerForm").style.display = "none";
-}
-
-/****************************************************
- * 新增客戶
- ****************************************************/
-async function addCustomer() {
-  const name = document.getElementById("newCustomerName").value.trim();
-  const phone = document.getElementById("newCustomerPhone").value.trim();
-  const note = document.getElementById("newCustomerNote").value.trim();
-
-  if (!name) {
-    showToast("請輸入客戶名稱");
-    return;
-  }
-
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "addCustomer",
-        name: name,
-        phone: phone,
-        note: note
-      })
-    });
-    const result = await response.json();
-
-    if (!result.success) {
-      showToast(result.message || "新增客戶失敗");
-      return;
-    }
-
-    const customer = result.customer;
-    currentCustomer = {
-      code: customer["客戶代碼"],
-      name: customer["客戶名稱"],
-      phone: customer["電話"],
-      note: customer["備註"]
-    };
-
-    localStorage.setItem("ktvCustomer", JSON.stringify(currentCustomer));
-    updateCustomerUI();
-    hideAddCustomerForm();
-    closeCustomerModal();
-    showToast("客戶建立成功：" + currentCustomer.code);
-  } catch(error) {
-    console.error(error);
-    showToast("新增客戶失敗");
-  }
-}
-
-/****************************************************
- * 載入歷史歌單
- ****************************************************/
-async function loadHistory() {
-  if (!window.searchCustomerData) {
-    showToast("請先搜尋客戶");
-    return;
-  }
-
-  const code = window.searchCustomerData["客戶代碼"];
-
-  try {
-    const response = await fetch(API_URL + "?action=history&code=" + encodeURIComponent(code));
-    const result = await response.json();
-    const list = document.getElementById("historyList");
-
-    if (!result.success || result.data.length === 0) {
-      list.innerHTML = `<div style="color:#888;padding:10px 0;">此客戶尚無歷史歌單</div>`;
-      return;
-    }
-
-    list.innerHTML = result.data.map(song => `
-      <div class="history-item">
-        <div class="history-title">[${song["歌曲編號"]}] ${song["歌名"]}</div>
-        <div class="history-artist">${song["歌手"]}</div>
-      </div>
-    `).join("");
-  } catch(error) {
-    console.error(error);
-    showToast("取得歷史歌單失敗");
-  }
-}
-
-/****************************************************
- * 搜尋歌曲
- ****************************************************/
 async function fetchSongs() {
   const keyword = document.getElementById("searchInput").value.trim();
-  const url = API_URL + "?action=songs&q=" + encodeURIComponent(keyword) + "&language=" + encodeURIComponent(currentLanguage);
+  const params = new URLSearchParams({ action: "search", q: keyword, language: currentLanguage });
+  const url = API_URL + "?" + params.toString();
+  const list = document.getElementById("songList");
+  list.innerHTML = `<div class="empty">搜尋中...</div>`;
 
   try {
     const response = await fetch(url);
     const result = await response.json();
-
-    if (!result.success) {
-      showToast("取得歌單失敗");
-      return;
-    }
+    if (!result.success) throw new Error(result.message);
 
     allSongs = result.data.map(item => ({
-      song_no: item["歌曲編號"],
+      brand: item["品牌"],
+      song_no: item["歌號"],
       title: item["歌名"],
       artist: item["歌手"],
       language: item["語言"],
       category: item["分類"],
-      brand: item["品牌"],
       status: item["狀態"],
       media: "music/" + item["歌名"] + ".mp3"
     }));
@@ -818,16 +588,13 @@ async function fetchSongs() {
     renderSongList();
   } catch(error) {
     console.error(error);
-    showToast("無法連線至雲端歌單");
+    list.innerHTML = `<div class="empty">無法取得歌曲資料</div>`;
+    showToast("歌曲資料取得失敗");
   }
 }
 
-/****************************************************
- * 渲染歌曲
- ****************************************************/
 function renderSongList() {
   const list = document.getElementById("songList");
-
   if (allSongs.length === 0) {
     list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
     return;
@@ -839,23 +606,18 @@ function renderSongList() {
       <div class="song">
         <div class="cover">🎤</div>
         <div class="song-info">
-          <div class="song-title">[${song.song_no}] ${song.title}</div>
-          <div class="artist">${song.artist} · ${song.language || "未分類"}</div>
+          <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
+          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}${song.brand ? " · " + escapeHtml(song.brand) : ""}</div>
         </div>
         <div class="song-actions">
-          <button class="favorite ${isFavorite ? "active" : ""}" onclick="toggleFavorite('${song.song_no}')">
-            ${isFavorite ? "♥" : "♡"}
-          </button>
-          <button class="add-btn" onclick="addSong('${song.song_no}')">＋ 點歌</button>
+          <button class="favorite ${isFavorite ? "active" : ""}" onclick="toggleFavorite('${escapeAttr(song.song_no)}')">${isFavorite ? "♥" : "♡"}</button>
+          <button class="add-btn" onclick="addSong('${escapeAttr(song.song_no)}')">＋ 點歌</button>
         </div>
       </div>
     `;
   }).join("");
 }
 
-/****************************************************
- * 語言篩選
- ****************************************************/
 function filterLanguage(language, button) {
   currentLanguage = language;
   document.querySelectorAll(".category").forEach(btn => btn.classList.remove("active"));
@@ -863,60 +625,25 @@ function filterLanguage(language, button) {
   fetchSongs();
 }
 
-/****************************************************
- * 點歌
- ****************************************************/
-async function addSong(songNo) {
-  if (!currentCustomer) {
-    showToast("請先選擇客戶");
-    openCustomerModal();
-    return;
-  }
+let searchTimer;
+document.getElementById("searchInput").addEventListener("input", function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(fetchSongs, 350);
+});
 
+function addSong(songNo) {
   const song = allSongs.find(s => String(s.song_no) === String(songNo));
   if (!song) return;
 
-  queue.push({
-    ...song,
-    queueId: Date.now() + Math.random()
-  });
-
+  queue.push({ ...song, queueId: Date.now() + Math.random() });
   saveQueue();
   renderQueue();
-  await saveSongHistory(song);
-  showToast("已點歌：" + song.title);
+  showToast(`已點歌：${song.title}`);
 }
 
-/****************************************************
- * 寫入歷史
- ****************************************************/
-async function saveSongHistory(song) {
-  if (!currentCustomer) return;
-
-  try {
-    await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "addHistory",
-        customerCode: currentCustomer.code,
-        songNo: song.song_no,
-        title: song.title,
-        artist: song.artist,
-        brand: song.brand
-      })
-    });
-  } catch(error) {
-    console.error("歷史紀錄寫入失敗", error);
-  }
-}
-
-/****************************************************
- * 待播清單
- ****************************************************/
 function renderQueue() {
   const list = document.getElementById("queueList");
   const count = document.getElementById("queueCount");
-
   count.textContent = `${queue.length} 首`;
 
   if (queue.length === 0) {
@@ -928,26 +655,25 @@ function renderQueue() {
     <div class="queue-item">
       <div class="queue-number">${index + 1}</div>
       <div class="queue-info">
-        <div class="queue-title">[${song.song_no}] ${song.title}</div>
-        <div class="queue-artist">${song.artist}</div>
+        <div class="queue-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
+        <div class="queue-artist">${escapeHtml(song.artist)}</div>
       </div>
       <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
     </div>
   `).join("");
 }
 
-/****************************************************
- * 移除歌曲
- ****************************************************/
 function removeSong(queueId) {
   queue = queue.filter(song => song.queueId !== queueId);
   saveQueue();
   renderQueue();
+  showToast("已移除歌曲");
 }
 
-/****************************************************
- * 播放
- ****************************************************/
+function saveQueue() {
+  localStorage.setItem("ktvQueue", JSON.stringify(queue));
+}
+
 function playCurrent() {
   if (!currentSong) {
     if (queue.length === 0) {
@@ -961,18 +687,16 @@ function playCurrent() {
   player.src = currentSong.media;
   document.getElementById("currentTitle").textContent = `[${currentSong.song_no}] ${currentSong.title}`;
   document.getElementById("currentArtist").textContent = currentSong.artist;
-
   player.play().catch(() => {
     showToast("找不到音樂檔案");
   });
 }
 
-/****************************************************
- * 下一首
- ****************************************************/
 function nextSong() {
   if (queue.length === 0) {
     currentSong = null;
+    document.getElementById("currentTitle").textContent = "尚未播放";
+    document.getElementById("currentArtist").textContent = "-";
     return;
   }
   currentSong = queue.shift();
@@ -981,41 +705,204 @@ function nextSong() {
   playCurrent();
 }
 
-/****************************************************
- * 收藏
- ****************************************************/
-function toggleFavorite(songNo) {
-  const value = String(songNo);
-  if (favorites.includes(value)) {
-    favorites = favorites.filter(item => item !== value);
-  } else {
-    favorites.push(value);
-  }
+document.getElementById("audioPlayer").addEventListener("ended", nextSong);
 
+function toggleFavorite(songNo) {
+  const code = String(songNo);
+  if (favorites.includes(code)) {
+    favorites = favorites.filter(item => item !== code);
+    showToast("已取消收藏");
+  } else {
+    favorites.push(code);
+    showToast("已加入收藏");
+  }
   localStorage.setItem("ktvFavorites", JSON.stringify(favorites));
   renderSongList();
 }
 
-/****************************************************
- * 儲存 Queue
- ****************************************************/
-function saveQueue() {
-  localStorage.setItem("ktvQueue", JSON.stringify(queue));
+function openCustomerModal() {
+  document.getElementById("customerModal").classList.add("show");
+  document.getElementById("customerSearch").focus();
 }
 
-/****************************************************
- * Toast
- ****************************************************/
+function closeCustomerModal() {
+  document.getElementById("customerModal").classList.remove("show");
+}
+
+let customerTimer;
+document.getElementById("customerSearch").addEventListener("input", function() {
+  clearTimeout(customerTimer);
+  customerTimer = setTimeout(searchCustomer, 300);
+});
+
+async function searchCustomer() {
+  const keyword = document.getElementById("customerSearch").value.trim();
+  const resultBox = document.getElementById("customerResults");
+  if (!keyword) {
+    resultBox.innerHTML = "";
+    return;
+  }
+
+  try {
+    const url = API_URL + "?action=customerSearch&q=" + encodeURIComponent(keyword);
+    const response = await fetch(url);
+    const result = await response.json();
+    if (!result.success) return;
+
+    resultBox.innerHTML = result.data.map(customer => `
+      <div class="customer-result" onclick="selectCustomer('${escapeAttr(customer["客戶代碼"])}', '${escapeAttr(customer["客戶名稱"])}')">
+        <b>${escapeHtml(customer["客戶代碼"])}</b> - ${escapeHtml(customer["客戶名稱"])}
+        <br>
+        <small>${escapeHtml(customer["電話"] || "")}</small>
+      </div>
+    `).join("");
+  } catch(error) {
+    console.error(error);
+  }
+}
+
+async function selectCustomer(code, name) {
+  currentCustomer = { code: code, name: name };
+  localStorage.setItem("ktvCustomer", JSON.stringify(currentCustomer));
+  renderCustomer();
+  closeCustomerModal();
+  showToast(`已選擇客戶：${name}`);
+  await loadCustomerHistory(code);
+}
+
+function renderCustomer() {
+  const name = document.getElementById("customerName");
+  const code = document.getElementById("customerCode");
+  if (!currentCustomer) {
+    name.textContent = "尚未選擇客戶";
+    code.textContent = "請新增或搜尋客戶";
+    return;
+  }
+  name.textContent = currentCustomer.name;
+  code.textContent = `客戶代碼：${currentCustomer.code}`;
+}
+
+async function createCustomer() {
+  const name = document.getElementById("newCustomerName").value.trim();
+  const phone = document.getElementById("newCustomerPhone").value.trim();
+  const note = document.getElementById("newCustomerNote").value.trim();
+
+  if (!name) {
+    showToast("請輸入客戶名稱");
+    return;
+  }
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "createCustomer", name: name, phone: phone, note: note })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message);
+
+    const customer = result.customer;
+    currentCustomer = { code: customer["客戶代碼"], name: customer["客戶名稱"] };
+    localStorage.setItem("ktvCustomer", JSON.stringify(currentCustomer));
+    renderCustomer();
+
+    document.getElementById("newCustomerName").value = "";
+    document.getElementById("newCustomerPhone").value = "";
+    document.getElementById("newCustomerNote").value = "";
+    closeCustomerModal();
+    showToast(`客戶建立成功：${customer["客戶代碼"]}`);
+  } catch(error) {
+    console.error(error);
+    showToast("新增客戶失敗");
+  }
+}
+
+async function loadCustomerHistory(customerCode) {
+  try {
+    const url = API_URL + "?action=history&customerCode=" + encodeURIComponent(customerCode);
+    const response = await fetch(url);
+    const result = await response.json();
+    if (!result.success || result.data.length === 0) return;
+
+    const yes = confirm(`找到 ${result.data.length} 首歷史歌曲，是否全部加入待播？`);
+    if (!yes) return;
+
+    result.data.forEach(song => {
+      queue.push({
+        song_no: song["歌號"],
+        title: song["歌名"],
+        artist: song["歌手"],
+        language: "",
+        media: "music/" + song["歌名"] + ".mp3",
+        queueId: Date.now() + Math.random()
+      });
+    });
+
+    saveQueue();
+    renderQueue();
+    showToast("歷史歌單已載入");
+  } catch(error) {
+    console.error(error);
+    showToast("歷史歌單載入失敗");
+  }
+}
+
+async function saveCurrentHistory() {
+  if (!currentCustomer) {
+    showToast("尚未選擇客戶");
+    return;
+  }
+  if (queue.length === 0) {
+    showToast("目前沒有點歌紀錄");
+    return;
+  }
+
+  try {
+    const songs = queue.map(song => ({ songNo: song.song_no, title: song.title, artist: song.artist }));
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "saveHistory", customerCode: currentCustomer.code, songs: songs })
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message);
+    showToast("歷史歌單已儲存");
+  } catch(error) {
+    console.error(error);
+    showToast("歷史歌單儲存失敗");
+  }
+}
+
+document.getElementById("customerModal").addEventListener("click", function(e) {
+  if (e.target === this) closeCustomerModal();
+});
+
 let toastTimer;
 function showToast(message) {
   const toast = document.getElementById("toast");
   toast.textContent = message;
   toast.classList.add("show");
-
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2000);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function escapeAttr(value) {
+  return String(value ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/"/g, "&quot;");
 }
 </script>
-
 </body>
 </html>
