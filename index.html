@@ -1,1002 +1,461 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KTV 點歌系統</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
-      background: radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
-      color: #fff;
-      min-height: 100vh;
-    }
-
-    header {
-      height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 30px;
-      background: rgba(10, 10, 20, .92);
-      border-bottom: 1px solid rgba(255, 255, 255, .08);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(12px);
-    }
-
-    .logo {
-      font-size: 24px;
-      font-weight: bold;
-      background: linear-gradient(90deg, #ff2bd6, #8c5cff, #22d3ee);
-      -webkit-background-clip: text;
-      color: transparent;
-    }
-
-    .room-info {
-      color: #aaa;
-      font-size: 14px;
-    }
-
-    .room-code {
-      color: #fff;
-      font-weight: bold;
-    }
-
-    main {
-      max-width: 1400px;
-      margin: auto;
-      padding: 25px;
-    }
-
-    /* =================================================
-       客戶區
-    ================================================= */
-    .customer-panel {
-      background: linear-gradient(135deg, #171329, #111126);
-      border: 1px solid rgba(255, 255, 255, .08);
-      border-radius: 18px;
-      padding: 18px;
-      margin-bottom: 20px;
-    }
-
-    .customer-title {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 12px;
-    }
-
-    .customer-form {
-      display: flex;
-      gap: 10px;
-    }
-
-    .customer-form input {
-      flex: 1;
-      height: 46px;
-      border: 1px solid #38384c;
-      border-radius: 12px;
-      background: #151522;
-      color: white;
-      padding: 0 15px;
-      font-size: 16px;
-      outline: none;
-    }
-
-    .customer-form input:focus {
-      border-color: #9b5cff;
-    }
-
-    .customer-btn {
-      padding: 0 20px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #22d3ee, #635bff);
-      color: white;
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-    }
-
-    .customer-status {
-      margin-top: 10px;
-      color: #aaa;
-      font-size: 13px;
-    }
-
-    /* =================================================
-       搜尋
-    ================================================= */
-    .search-area {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .search-box {
-      flex: 1;
-      position: relative;
-    }
-
-    .search-box input {
-      width: 100%;
-      height: 52px;
-      border: 1px solid #38384c;
-      border-radius: 14px;
-      padding: 0 20px 0 48px;
-      background: #151522;
-      color: white;
-      outline: none;
-      font-size: 16px;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 18px;
-      top: 15px;
-      font-size: 20px;
-      color: #999;
-    }
-
-    .search-btn {
-      width: 100px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #ff2bd6, #734cff);
-      color: white;
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-    }
-
-    /* =================================================
-       分類
-    ================================================= */
-    .categories {
-      display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      margin-bottom: 25px;
-      padding-bottom: 5px;
-    }
-
-    .category {
-      flex-shrink: 0;
-      padding: 9px 18px;
-      border-radius: 30px;
-      background: #171725;
-      color: #aaa;
-      border: 1px solid #2d2d3d;
-      cursor: pointer;
-    }
-
-    .category.active {
-      color: white;
-      background: linear-gradient(135deg, #ff2bd6, #744cff);
-      border-color: transparent;
-    }
-
-    /* =================================================
-       主內容
-    ================================================= */
-    .content {
-      display: grid;
-      grid-template-columns: 1fr 380px;
-      gap: 25px;
-    }
-
-    .section-title {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 18px;
-    }
-
-    .result-info {
-      color: #888;
-      font-size: 13px;
-      margin-bottom: 12px;
-    }
-
-    .song-list {
-      display: grid;
-      gap: 12px;
-    }
-
-    .song {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      padding: 14px;
-      border: 1px solid rgba(255, 255, 255, .07);
-      background: rgba(25, 25, 38, .75);
-      border-radius: 15px;
-    }
-
-    .cover {
-      width: 64px;
-      height: 64px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      font-size: 25px;
-      background: linear-gradient(135deg, #ff2bd6, #653eff);
-    }
-
-    .song-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .song-title {
-      font-size: 17px;
-      font-weight: bold;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .artist {
-      color: #999;
-      font-size: 14px;
-      margin-top: 6px;
-    }
-
-    .song-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .favorite {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      background: #292938;
-      color: #aaa;
-      font-size: 18px;
-      border: none;
-      cursor: pointer;
-    }
-
-    .favorite.active {
-      color: #ff3e91;
-    }
-
-    .add-btn {
-      padding: 10px 15px;
-      border-radius: 10px;
-      color: white;
-      background: linear-gradient(135deg, #ff2bd6, #744cff);
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-    }
-
-    /* =================================================
-       右側
-    ================================================= */
-    .queue-panel {
-      background: rgba(18, 18, 29, .9);
-      border: 1px solid rgba(255, 255, 255, .08);
-      border-radius: 18px;
-      padding: 20px;
-      height: fit-content;
-      position: sticky;
-      top: 95px;
-    }
-
-    /* =================================================
-       歷史歌單
-    ================================================= */
-    .history-panel {
-      margin-bottom: 20px;
-    }
-
-    .history-list {
-      display: grid;
-      gap: 8px;
-    }
-
-    .history-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px;
-      border-radius: 11px;
-      background: #20202e;
-    }
-
-    .history-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .history-title {
-      font-size: 14px;
-      font-weight: bold;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .history-artist {
-      color: #888;
-      font-size: 12px;
-      margin-top: 3px;
-    }
-
-    .history-time {
-      color: #666;
-      font-size: 10px;
-      margin-top: 3px;
-    }
-
-    .history-add {
-      padding: 7px 9px;
-      border-radius: 8px;
-      background: #3a315c;
-      color: #fff;
-      font-size: 12px;
-      border: none;
-      cursor: pointer;
-    }
-
-    /* =================================================
-       Queue
-    ================================================= */
-    .queue-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-
-    .queue-count {
-      color: #aaa;
-      font-size: 13px;
-    }
-
-    .queue-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .queue-item {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      padding: 11px;
-      border-radius: 12px;
-      background: #20202e;
-    }
-
-    .queue-number {
-      width: 28px;
-      color: #8d7aff;
-      font-weight: bold;
-      text-align: center;
-    }
-
-    .queue-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .queue-title {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-size: 14px;
-    }
-
-    .queue-artist {
-      font-size: 12px;
-      color: #888;
-      margin-top: 3px;
-    }
-
-    .remove-btn {
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-      color: #888;
-      background: transparent;
-      font-size: 18px;
-      border: none;
-      cursor: pointer;
-    }
-
-    /* =================================================
-       Player
-    ================================================= */
-    .player {
-      margin-top: 18px;
-      background: linear-gradient(135deg, #251040, #111126);
-      border-radius: 16px;
-      padding: 18px;
-    }
-
-    .now-playing {
-      color: #aaa;
-      font-size: 12px;
-    }
-
-    .current-title {
-      font-size: 17px;
-      font-weight: bold;
-      margin-top: 5px;
-    }
-
-    .current-artist {
-      font-size: 13px;
-      color: #888;
-      margin-top: 3px;
-    }
-
-    .player-controls {
-      display: flex;
-      gap: 8px;
-      margin-top: 15px;
-    }
-
-    .control-btn {
-      flex: 1;
-      height: 40px;
-      border-radius: 10px;
-      background: #29293a;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-
-    .play-btn {
-      background: linear-gradient(135deg, #ff2bd6, #744cff);
-    }
-
-    audio {
-      width: 100%;
-      margin-top: 12px;
-    }
-
-    /* =================================================
-       Pagination
-    ================================================= */
-    .pagination {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 25px;
-    }
-
-    .page-btn {
-      padding: 9px 16px;
-      border-radius: 10px;
-      background: #252537;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-
-    .page-btn:disabled {
-      opacity: .35;
-      cursor: not-allowed;
-    }
-
-    /* =================================================
-       Empty
-    ================================================= */
-    .empty {
-      color: #777;
-      text-align: center;
-      padding: 30px 10px;
-      font-size: 14px;
-    }
-
-    /* =================================================
-       Toast
-    ================================================= */
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 30px;
-      transform: translateX(-50%) translateY(20px);
-      background: #242435;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 30px;
-      opacity: 0;
-      pointer-events: none;
-      transition: .3s;
-      z-index: 999;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    @media(max-width:900px) {
-      .content {
-        grid-template-columns: 1fr;
-      }
-      .queue-panel {
-        position: static;
-      }
-      .customer-form {
-        flex-direction: column;
-      }
-      .customer-btn {
-        height: 45px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KTV 客戶入口</title>
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+  color: white;
+  background: radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
+}
+.container {
+  width: 100%;
+  max-width: 430px;
+  padding: 20px;
+}
+.card {
+  padding: 35px 28px;
+  border-radius: 24px;
+  background: rgba(18, 18, 30, .94);
+  border: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .5);
+}
+.logo {
+  text-align: center;
+  font-size: 29px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #ff2bd6, #8c5cff, #22d3ee);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  margin-top: 8px;
+  font-size: 14px;
+}
+.room {
+  margin-top: 25px;
+  padding: 12px;
+  text-align: center;
+  border-radius: 12px;
+  background: #151522;
+  color: #999;
+}
+.room span {
+  color: white;
+  font-weight: bold;
+}
+.form {
+  margin-top: 22px;
+}
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: #bbb;
+  font-size: 14px;
+}
+.customer-input {
+  width: 100%;
+  height: 52px;
+  padding: 0 15px;
+  border-radius: 12px;
+  border: 1px solid #38384c;
+  outline: none;
+  background: #10101b;
+  color: white;
+  font-size: 17px;
+  text-align: center;
+}
+.customer-input:focus {
+  border-color: #9b5cff;
+}
+button {
+  border: none;
+  cursor: pointer;
+}
+.login-btn {
+  width: 100%;
+  height: 52px;
+  margin-top: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+}
+.add-customer-btn {
+  width: 100%;
+  height: 48px;
+  margin-top: 10px;
+  border-radius: 12px;
+  background: #20202f;
+  border: 1px solid #38384c;
+  color: #ddd;
+  font-size: 14px;
+}
+.guest-btn {
+  width: 100%;
+  height: 46px;
+  margin-top: 10px;
+  border-radius: 12px;
+  background: transparent;
+  color: #777;
+  font-size: 13px;
+}
+.error {
+  min-height: 20px;
+  margin-top: 10px;
+  text-align: center;
+  color: #ff6688;
+  font-size: 13px;
+}
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .75);
+  backdrop-filter: blur(8px);
+}
+.modal.show {
+  display: flex;
+}
+.modal-box {
+  width: 100%;
+  max-width: 420px;
+  padding: 28px;
+  border-radius: 22px;
+  background: #181827;
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .6);
+  animation: modalIn .2s ease;
+}
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.modal-title {
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+}
+.modal-subtitle {
+  margin-top: 7px;
+  margin-bottom: 24px;
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+}
+.modal-input {
+  width: 100%;
+  height: 52px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid #38384c;
+  outline: none;
+  background: #10101b;
+  color: white;
+  font-size: 16px;
+}
+.modal-input:focus {
+  border-color: #9b5cff;
+}
+.modal-error {
+  min-height: 20px;
+  margin-top: 8px;
+  color: #ff6688;
+  font-size: 13px;
+  text-align: center;
+}
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+.modal-buttons button {
+  flex: 1;
+  height: 46px;
+  border-radius: 11px;
+  font-weight: bold;
+}
+.modal-cancel {
+  background: #29293a;
+  color: #aaa;
+}
+.modal-confirm {
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  color: white;
+}
+</style>
 </head>
 <body>
-
-<header>
-  <div class="logo">🎤 KTV 點歌系統</div>
-  <div class="room-info">
-    包廂：<span class="room-code">A-208</span>
-  </div>
-</header>
-
-<main>
-  <!-- 客戶代碼 -->
-  <div class="customer-panel">
-    <div class="customer-title">👤 客戶資料</div>
-    <div class="customer-form">
-      <input type="text" id="customerCode" placeholder="請輸入客戶代碼，例如 A12345" autocomplete="off">
-      <button class="customer-btn" onclick="loadHistory()">載入歷史歌單</button>
+<div class="container">
+  <div class="card">
+    <div class="logo">🎤 KTV 點歌系統</div>
+    <div class="subtitle">歡迎來到歡唱包廂</div>
+    <div class="room">
+      包廂：<span id="roomCode">A-208</span>
     </div>
-    <div class="customer-status" id="customerStatus">尚未登入客戶</div>
-  </div>
-
-  <!-- 歷史歌單 -->
-  <div class="history-panel" id="historyPanel" style="display:none;">
-    <div class="section-title">📜 歷史歌單</div>
-    <div class="history-list" id="historyList"></div>
-  </div>
-
-  <!-- 搜尋 -->
-  <div class="search-area">
-    <div class="search-box">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="輸入歌名、歌手或歌號搜尋..." autocomplete="off">
+    <div class="form">
+      <label>客戶代碼</label>
+      <input class="customer-input" id="customerCode" placeholder="請輸入客戶代碼" autocomplete="off">
+      <button class="login-btn" onclick="loginCustomer()">開始點歌</button>
+      <button class="add-customer-btn" onclick="openCreateCustomer()">＋ 新增客戶</button>
+      <button class="guest-btn" onclick="enterGuest()">不輸入客戶代碼，直接點歌</button>
+      <div id="error" class="error"></div>
     </div>
-    <button class="search-btn" onclick="searchSongs(1)">搜尋</button>
   </div>
+</div>
 
-  <!-- 語言 -->
-  <div class="categories">
-    <button class="category active" onclick="filterLanguage('全部', this)">全部</button>
-    <button class="category" onclick="filterLanguage('國語', this)">國語</button>
-    <button class="category" onclick="filterLanguage('台語', this)">台語</button>
-    <button class="category" onclick="filterLanguage('粵語', this)">粵語</button>
-    <button class="category" onclick="filterLanguage('英文', this)">英文</button>
-    <button class="category" onclick="filterLanguage('日文', this)">日文</button>
+<!-- ======================================
+     新增客戶 Modal
+======================================= -->
+<div id="customerModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-title">👤 新增客戶</div>
+    <div class="modal-subtitle">建立後會自動產生客戶代碼</div>
+    <label>客戶名稱</label>
+    <input id="newCustomerName" class="modal-input" placeholder="例如：王先生" maxlength="30" autocomplete="off">
+    <div id="createCustomerError" class="modal-error"></div>
+    <div class="modal-buttons">
+      <button class="modal-cancel" onclick="closeCreateCustomer()">取消</button>
+      <button class="modal-confirm" id="createCustomerBtn" onclick="createCustomer()">建立客戶</button>
+    </div>
   </div>
-
-  <div class="content">
-    <!-- 歌曲 -->
-    <section>
-      <div class="section-title">🎵 雲端歌曲列表</div>
-      <div class="result-info" id="resultInfo">請輸入歌名、歌手或歌號</div>
-      <div class="song-list" id="songList">
-        <div class="empty">🔍 請輸入關鍵字開始搜尋</div>
-      </div>
-      <div class="pagination">
-        <button class="page-btn" id="prevBtn" onclick="changePage(-1)" disabled>← 上一頁</button>
-        <span id="pageInfo">-</span>
-        <button class="page-btn" id="nextBtn" onclick="changePage(1)" disabled>下一頁 →</button>
-      </div>
-    </section>
-
-    <!-- 待播 -->
-    <aside class="queue-panel">
-      <div class="queue-header">
-        <div class="section-title">📋 待播歌曲</div>
-        <div class="queue-count" id="queueCount">0 首</div>
-      </div>
-      <div class="queue-list" id="queueList"></div>
-
-      <!-- Player -->
-      <div class="player">
-        <div class="now-playing">NOW PLAYING</div>
-        <div class="current-title" id="currentTitle">尚未播放</div>
-        <div class="current-artist" id="currentArtist">-</div>
-        <audio id="audioPlayer" controls></audio>
-        <div class="player-controls">
-          <button class="control-btn play-btn" onclick="playCurrent()">▶ 播放</button>
-          <button class="control-btn" onclick="nextSong()">⏭ 下一首</button>
-        </div>
-      </div>
-    </aside>
-  </div>
-</main>
-
-<div class="toast" id="toast"></div>
+</div>
 
 <script>
-  // API
-  const API_URL = "https://script.google.com/macros/s/AKfycbzy90x5k8kQZ_5mwsSslevBpMZp4SnVeJs1tkNMm2sv0lWwMKT7Aej1Oz4lz5ZB1Jx8jA/exec";
-  const PAGE_SIZE = 30;
+/************************************************
+ * 設定
+ ************************************************/
+const API_URL = "https://script.google.com/macros/s/AKfycbxHG5-NJ2R3jp17CSZYisCdr9J3lih7tP4QiAZ6U2iUk8trxrB8uIUXjF-kM7wby9RrEQ/exec";
+const ROOM_CODE = "meimei";
+const KTV_PAGE = "index.html";
 
-  // 狀態
-  let currentCustomerCode = "";
-  let currentLanguage = "全部";
-  let currentPage = 1;
-  let hasMore = false;
-  let allSongs = [];
-  let queue = JSON.parse(localStorage.getItem("ktvQueue")) || [];
-  let favorites = JSON.parse(localStorage.getItem("ktvFavorites")) || [];
-  let currentSong = null;
+/************************************************
+ * 登入客戶
+ ************************************************/
+async function loginCustomer() {
+  const input = document.getElementById("customerCode");
+  const error = document.getElementById("error");
+  const customerCode = input.value.trim();
 
-  // 客戶代碼
-  async function loadHistory() {
-    const input = document.getElementById("customerCode");
-    const code = input.value.trim();
+  error.textContent = "";
 
-    if (!code) {
-      showToast("請輸入客戶代碼");
+  if (!customerCode) {
+    error.textContent = "請輸入客戶代碼";
+    input.focus();
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      API_URL + "?action=customer&customerCode=" + encodeURIComponent(customerCode)
+    );
+    const result = await response.json();
+
+    if (!result.success) {
+      error.textContent = result.message || "客戶不存在";
       return;
     }
 
-    currentCustomerCode = code;
-    const status = document.getElementById("customerStatus");
-    status.textContent = `正在載入 ${code} 的歷史歌單...`;
+    const customer = result.data;
 
-    try {
-      const url = `${API_URL}?action=history&customerCode=` + encodeURIComponent(code);
-      const response = await fetch(url);
-      const result = await response.json();
+    // 建立場次
+    const session = await createSession(customerCode);
 
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      status.textContent = `目前客戶：${code} 歷史紀錄 ${result.total} 首`;
-      renderHistory(result.data || []);
-    } catch (error) {
-      console.error(error);
-      status.textContent = "載入歷史歌單失敗";
-      showToast("無法取得歷史歌單");
-    }
-  }
-
-  // 顯示歷史
-  function renderHistory(history) {
-    const panel = document.getElementById("historyPanel");
-    const list = document.getElementById("historyList");
-    panel.style.display = "block";
-
-    if (history.length === 0) {
-      list.innerHTML = `<div class="empty">🎵 這位客戶還沒有歷史歌單</div>`;
+    if (!session.success) {
+      error.textContent = session.message || "建立場次失敗";
       return;
     }
 
-    list.innerHTML = history.map((song, index) => `
-      <div class="history-item">
-        <div class="history-info">
-          <div class="history-title">[${escapeHtml(song["歌號"])}] ${escapeHtml(song["歌名"])}</div>
-          <div class="history-artist">${escapeHtml(song["歌手"])} · ${escapeHtml(song["品牌"])}</div>
-          <div class="history-time">${escapeHtml(song["點歌時間"])} ${song["包廂"] ? " · " + escapeHtml(song["包廂"]) : ""}</div>
-        </div>
-        <button class="history-add" onclick="addHistorySong(${index})">＋ 再唱</button>
-      </div>
-    `).join("");
+    // 儲存
+    localStorage.setItem("ktvCustomer", JSON.stringify(customer));
+    localStorage.setItem("ktvSessionId", session.sessionId);
+    localStorage.setItem("ktvRoom", ROOM_CODE);
 
-    window.currentHistory = history;
+    // 進入點歌頁
+    location.href = KTV_PAGE;
+  } catch (error) {
+    console.error(error);
+    const errEl = document.getElementById("error");
+    errEl.textContent = "無法連線伺服器";
   }
+}
 
-  // 從歷史歌單再次點歌
-  function addHistorySong(index) {
-    const history = window.currentHistory || [];
-    const song = history[index];
-    if (!song) return;
-
-    addToQueue({
-      "品牌": song["品牌"],
-      "歌號": song["歌號"],
-      "歌名": song["歌名"],
-      "歌手": song["歌手"],
-      "語言": "",
-      "分類": ""
-    });
-
-    recordHistory(song);
-  }
-
-  // 搜尋歌曲
-  async function searchSongs(page = 1) {
-    const keyword = document.getElementById("searchInput").value.trim();
-
-    if (!keyword) {
-      document.getElementById("songList").innerHTML = `<div class="empty">🔍 請輸入關鍵字開始搜尋</div>`;
-      return;
-    }
-
-    currentPage = page;
-    const params = new URLSearchParams();
-    params.set("action", "search");
-    params.set("q", keyword);
-    params.set("language", currentLanguage);
-    params.set("page", page);
-    params.set("limit", PAGE_SIZE);
-
-    document.getElementById("songList").innerHTML = `<div class="empty">🔍 搜尋中...</div>`;
-
-    try {
-      const response = await fetch(`${API_URL}?${params.toString()}`);
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      allSongs = result.data || [];
-      hasMore = result.hasMore;
-      renderSongs();
-      updatePagination(result.page, result.total, result.hasMore);
-    } catch (error) {
-      console.error(error);
-      showToast("搜尋歌曲失敗");
-    }
-  }
-
-  // 顯示搜尋結果
-  function renderSongs() {
-    const list = document.getElementById("songList");
-
-    if (allSongs.length === 0) {
-      list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
-      return;
-    }
-
-    list.innerHTML = allSongs.map((song, index) => {
-      const songNo = String(song["歌號"] || "");
-      const title = String(song["歌名"] || "");
-      const artist = String(song["歌手"] || "");
-      const language = String(song["語言"] || "");
-      const brand = String(song["品牌"] || "");
-      const favorite = favorites.includes(songNo);
-
-      return `
-        <div class="song">
-          <div class="cover">🎤</div>
-          <div class="song-info">
-            <div class="song-title">[${escapeHtml(songNo)}] ${escapeHtml(title)}</div>
-            <div class="artist">${escapeHtml(artist)} · ${escapeHtml(language)} · ${escapeHtml(brand)}</div>
-          </div>
-          <div class="song-actions">
-            <button class="favorite ${favorite ? "active" : ""}" onclick="toggleFavorite('${escapeJs(songNo)}')">
-              ${favorite ? "♥" : "♡"}
-            </button>
-            <button class="add-btn" onclick="addSong(${index})">＋ 點歌</button>
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  // 點歌
-  function addSong(index) {
-    const song = allSongs[index];
-    if (!song) return;
-
-    addToQueue(song);
-    if (currentCustomerCode) {
-      recordHistory(song);
-    }
-  }
-
-  // 加入待播
-  function addToQueue(song) {
-    queue.push({
-      "品牌": song["品牌"],
-      "歌號": song["歌號"],
-      "歌名": song["歌名"],
-      "歌手": song["歌手"],
-      "語言": song["語言"],
-      "分類": song["分類"],
-      queueId: Date.now() + Math.random()
-    });
-
-    saveQueue();
-    renderQueue();
-    showToast(`已點歌：${song["歌名"]}`);
-  }
-
-  // 記錄歷史
-  async function recordHistory(song) {
-    if (!currentCustomerCode) return;
-
-    try {
-      const params = new URLSearchParams();
-      params.set("action", "addHistory");
-      params.set("customerCode", currentCustomerCode);
-      params.set("songNo", song["歌號"] || "");
-      params.set("songTitle", song["歌名"] || "");
-      params.set("artist", song["歌手"] || "");
-      params.set("brand", song["品牌"] || "");
-      params.set("room", getRoomCode());
-
-      await fetch(`${API_URL}?${params.toString()}`);
-    } catch (error) {
-      console.error("歷史紀錄失敗", error);
-    }
-  }
-
-  // 包廂
-  function getRoomCode() {
-    const element = document.querySelector(".room-code");
-    return element ? element.textContent.trim() : "";
-  }
-
-  // 待播
-  function renderQueue() {
-    const list = document.getElementById("queueList");
-    const count = document.getElementById("queueCount");
-    count.textContent = `${queue.length} 首`;
-
-    if (queue.length === 0) {
-      list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>選擇歌曲開始點歌吧 🎤</div>`;
-      return;
-    }
-
-    list.innerHTML = queue.map((song, index) => `
-      <div class="queue-item">
-        <div class="queue-number">${index + 1}</div>
-        <div class="queue-info">
-          <div class="queue-title">[${escapeHtml(song["歌號"])}] ${escapeHtml(song["歌名"])}</div>
-          <div class="queue-artist">${escapeHtml(song["歌手"])}</div>
-        </div>
-        <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
-      </div>
-    `).join("");
-  }
-
-  // 移除
-  function removeSong(queueId) {
-    queue = queue.filter(song => song.queueId !== queueId);
-    saveQueue();
-    renderQueue();
-  }
-
-  // 儲存
-  function saveQueue() {
-    localStorage.setItem("ktvQueue", JSON.stringify(queue));
-  }
-
-  // 播放
-  function playCurrent() {
-    if (!currentSong) {
-      if (queue.length === 0) {
-        showToast("目前沒有待播歌曲");
-        return;
-      }
-      currentSong = queue[0];
-    }
-
-    const player = document.getElementById("audioPlayer");
-    player.src = `music/${encodeURIComponent(currentSong["歌號"])}.mp3`;
-    document.getElementById("currentTitle").textContent = `[${currentSong["歌號"]}] ${currentSong["歌名"]}`;
-    document.getElementById("currentArtist").textContent = currentSong["歌手"];
-    
-    player.play().catch(() => {
-      showToast("找不到音樂檔案");
-    });
-  }
-
-  // 下一首
-  function nextSong() {
-    if (queue.length === 0) {
-      currentSong = null;
-      return;
-    }
-
-    queue.shift();
-    currentSong = queue[0] || null;
-    saveQueue();
-    renderQueue();
-
-    if (currentSong) {
-      playCurrent();
-    }
-  }
-
-  // 語言
-  function filterLanguage(language, button) {
-    currentLanguage = language;
-    document.querySelectorAll(".category").forEach(btn => btn.classList.remove("active"));
-    button.classList.add("active");
-
-    const keyword = document.getElementById("searchInput").value.trim();
-    if (keyword) {
-      searchSongs(1);
-    }
-  }
-
-  // Enter
-  document.getElementById("searchInput").addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      searchSongs(1);
-    }
+/************************************************
+ * 建立場次
+ ************************************************/
+async function createSession(customerCode) {
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify({
+      action: "createSession",
+      customerCode: customerCode,
+      room: ROOM_CODE
+    })
   });
+  return response.json();
+}
 
-  // 收藏
-  function toggleFavorite(songNo) {
-    songNo = String(songNo);
-    if (favorites.includes(songNo)) {
-      favorites = favorites.filter(item => String(item) !== songNo);
-    } else {
-      favorites.push(songNo);
+/************************************************
+ * 新增客戶 Modal
+ ************************************************/
+function openCreateCustomer() {
+  const modal = document.getElementById("customerModal");
+  const input = document.getElementById("newCustomerName");
+
+  document.getElementById("createCustomerError").textContent = "";
+  input.value = "";
+  modal.classList.add("show");
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeCreateCustomer() {
+  document.getElementById("customerModal").classList.remove("show");
+}
+
+/************************************************
+ * 建立客戶
+ ************************************************/
+async function createCustomer() {
+  const input = document.getElementById("newCustomerName");
+  const error = document.getElementById("createCustomerError");
+  const button = document.getElementById("createCustomerBtn");
+  const customerName = input.value.trim();
+
+  error.textContent = "";
+
+  if (!customerName) {
+    error.textContent = "請輸入客戶名稱";
+    input.focus();
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "建立中...";
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify({
+        action: "createCustomer",
+        customerName: customerName
+      })
+    });
+    const result = await response.json();
+
+    if (!result.success) {
+      error.textContent = result.message || "建立失敗";
+      return;
     }
 
-    localStorage.setItem("ktvFavorites", JSON.stringify(favorites));
-    renderSongs();
-  }
+    const customer = result.data;
 
-  // 分頁
-  function changePage(direction) {
-    const page = currentPage + direction;
-    if (page < 1) return;
-    if (direction > 0 && !hasMore) return;
-    searchSongs(page);
-  }
+    // 建立場次
+    const session = await createSession(customer["客戶代碼"]);
 
-  function updatePagination(page, total, more) {
-    document.getElementById("pageInfo").textContent = total > 0 ? `第 ${page} 頁` : "-";
-    document.getElementById("prevBtn").disabled = page <= 1;
-    document.getElementById("nextBtn").disabled = !more;
-    document.getElementById("resultInfo").textContent = total > 0 ? `找到 ${total} 首歌曲` : "找不到符合的歌曲";
-  }
-
-  // Toast
-  let toastTimer;
-  function showToast(message) {
-    const toast = document.getElementById("toast");
-    toast.textContent = message;
-    toast.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-      toast.classList.remove("show");
-    }, 2000);
-  }
-
-  // Escape
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  function escapeJs(value) {
-    return String(value ?? "")
-      .replace(/\\/g, "\\\\")
-      .replace(/'/g, "\\'")
-      .replace(/"/g, '\\"');
-  }
-
-  // 初始化
-  renderQueue();
-  document.getElementById("audioPlayer").volume = .8;
-
-  // 客戶代碼按 Enter
-  document.getElementById("customerCode").addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      loadHistory();
+    if (!session.success) {
+      error.textContent = "客戶建立成功，但場次建立失敗";
+      return;
     }
-  });
+
+    // 儲存客戶
+    localStorage.setItem("ktvCustomer", JSON.stringify(customer));
+    localStorage.setItem("ktvSessionId", session.sessionId);
+    localStorage.setItem("ktvRoom", ROOM_CODE);
+
+    // 進入點歌
+    closeCreateCustomer();
+    location.href = KTV_PAGE;
+  } catch (err) {
+    console.error(err);
+    error.textContent = "無法連線伺服器";
+  } finally {
+    button.disabled = false;
+    button.textContent = "建立客戶";
+  }
+}
+
+/************************************************
+ * 不登入客戶
+ ************************************************/
+async function enterGuest() {
+  try {
+    const session = await createSession("");
+
+    if (!session.success) {
+      alert("建立場次失敗");
+      return;
+    }
+
+    localStorage.removeItem("ktvCustomer");
+    localStorage.setItem("ktvSessionId", session.sessionId);
+    localStorage.setItem("ktvRoom", ROOM_CODE);
+    location.href = KTV_PAGE;
+  } catch (error) {
+    console.error(error);
+    alert("無法建立場次");
+  }
+}
+
+/************************************************
+ * Enter 登入
+ ************************************************/
+document.getElementById("customerCode").addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    loginCustomer();
+  }
+});
+
+/************************************************
+ * Modal Enter / ESC
+ ************************************************/
+document.getElementById("newCustomerName").addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    createCustomer();
+  }
+  if (event.key === "Escape") {
+    closeCreateCustomer();
+  }
+});
+
+/************************************************
+ * 點背景關閉 Modal
+ ************************************************/
+document.getElementById("customerModal").addEventListener("click", function(event) {
+  if (event.target === this) {
+    closeCreateCustomer();
+  }
+});
 </script>
-
 </body>
 </html>
