@@ -50,8 +50,8 @@ header {
 }
 .customer-btn:hover { background: #3b3b50; }
 main { max-width: 1400px; margin: auto; padding: 25px; }
-.search-area { margin-bottom: 20px; }
-.search-box { position: relative; }
+.search-area { margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.search-box { position: relative; flex: 1; min-width: 250px; }
 .search-box input {
   width: 100%;
   height: 52px;
@@ -65,6 +65,21 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
 }
 .search-box input:focus { border-color: #9b5cff; box-shadow: 0 0 0 3px rgba(155,92,255,.15); }
 .search-icon { position: absolute; left: 18px; top: 15px; font-size: 1.1rem; color: #999; }
+
+/* 排序選單樣式 */
+.sort-box select {
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid #38384c;
+  background: #151522;
+  color: white;
+  outline: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.sort-box select:focus { border-color: #9b5cff; }
+
 .categories { display: flex; gap: 10px; overflow-x: auto; margin-bottom: 25px; padding-bottom: 5px; }
 .category {
   flex-shrink: 0;
@@ -285,6 +300,15 @@ audio { width: 100%; margin-top: 10px; }
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="輸入歌名、歌手或歌號..." autocomplete="off">
     </div>
+    <div class="sort-box">
+      <select id="sortSelect" onchange="renderSongList()">
+        <option value="default">預設排序</option>
+        <option value="title_len_asc">歌名字數：少 ➔ 多</option>
+        <option value="title_len_desc">歌名字數：多 ➔ 少</option>
+        <option value="artist_len_asc">歌手字數：少 ➔ 多</option>
+        <option value="artist_len_desc">歌手字數：多 ➔ 少</option>
+      </select>
+    </div>
   </div>
 
   <div class="categories" id="categoryContainer">
@@ -457,7 +481,22 @@ function renderSongList() {
     list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
     return;
   }
-  list.innerHTML = allSongs.map(song => {
+
+  // 複製一份陣列進行排序處理
+  let displaySongs = [...allSongs];
+  const sortType = document.getElementById("sortSelect").value;
+
+  if (sortType === "title_len_asc") {
+    displaySongs.sort((a, b) => String(a.title || "").length - String(b.title || "").length);
+  } else if (sortType === "title_len_desc") {
+    displaySongs.sort((a, b) => String(b.title || "").length - String(a.title || "").length);
+  } else if (sortType === "artist_len_asc") {
+    displaySongs.sort((a, b) => String(a.artist || "").length - String(b.artist || "").length);
+  } else if (sortType === "artist_len_desc") {
+    displaySongs.sort((a, b) => String(b.artist || "").length - String(a.artist || "").length);
+  }
+
+  list.innerHTML = displaySongs.map(song => {
     const isFavorite = favorites.includes(String(song.song_no));
     return `
       <div class="song">
@@ -495,7 +534,6 @@ function addSong(songNo) {
   showToast(`已點歌：${song.title}`);
 }
 
-// 待播歌曲渲染：與歌曲列表風格完全一致，並帶有編號與移除鈕
 function renderQueue() {
   const list = document.getElementById("queueList");
   const count = document.getElementById("queueCount");
@@ -693,7 +731,6 @@ async function createCustomer() {
   }
 }
 
-// 歷史歌單渲染：與歌曲列表完全一致的卡片風格（含圖示、歌號、歌名、歌手、語言、品牌與點歌按鈕）
 async function openHistory() {
   if (!currentCustomer) {
     showToast("請先選擇客戶");
