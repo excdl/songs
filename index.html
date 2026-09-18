@@ -387,6 +387,7 @@ main {
   font-weight: bold;
   text-align: center;
   font-size: .95rem;
+  flex-shrink: 0;
 }
 .remove-btn {
   width: 32px;
@@ -754,7 +755,7 @@ audio {
 /*************************************************
  * API
  *************************************************/
-const API_URL = "https://script.google.com/macros/s/AKfycbxNFT3F11akz-LG9nXVSO38BElNNVpCb8LI7JBlW1aTIu5BPW4BQ6fKdColU0fX7sRVAg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby3UweB6W3ERSi29YyN3kFsfoVKy_ZBCfeKM4vsSdxKiLDTYd_lUl9i73hTMQx9Xys7Cw/exec";
 /*************************************************
  * 門禁設定
  *************************************************/
@@ -765,9 +766,10 @@ let accessToken = sessionStorage.getItem("ktvAccessToken") || "";
 let accessTokenExpiresAt = Number(sessionStorage.getItem("ktvAccessTokenExpiresAt") || 0);
 let currentLocationName = sessionStorage.getItem("ktvLocationName") || "";
 /*************************************************
- * KTV 狀態
+ * KTV 狀態與前端快取
  *************************************************/
 let allSongs = [];
+let songCache = {}; // 語言級別快取，優化查詢速度
 let currentLanguage = "全部";
 let currentCustomer = null;
 let queue = JSON.parse(localStorage.getItem("ktvQueue") || "[]");
@@ -1051,7 +1053,7 @@ async function apiPost(data) {
   return result;
 }
 /*************************************************
- * 搜尋歌曲輸入
+ * 搜尋歌曲輸入 (優化防抖與快取查詢)
  *************************************************/
 function handleSearchInput() {
   clearTimeout(searchTimer);
@@ -1062,6 +1064,7 @@ function handleSearchInput() {
     lastKeyword = "";
     return;
   }
+  // 縮短防抖時間至 150ms 提升反應速度
   searchTimer = setTimeout(() => {
     if (keyword !== lastKeyword) {
       lastKeyword = keyword;
@@ -1069,7 +1072,7 @@ function handleSearchInput() {
     } else {
       renderSongList();
     }
-  }, 250);
+  }, 150);
 }
 /*************************************************
  * 載入語言
@@ -1090,7 +1093,7 @@ async function loadLanguages() {
   }
 }
 /*************************************************
- * 搜尋歌曲
+ * 搜尋歌曲 (加入記憶體快取加速)
  *************************************************/
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
@@ -1099,17 +1102,26 @@ async function fetchSongs(keyword = "") {
     allSongs = [];
     return;
   }
+
+  // 檢查是否已有該語言快取，若有則直接在記憶體中過濾，大幅提升速度
+  if (songCache[currentLanguage]) {
+    allSongs = songCache[currentLanguage];
+    renderSongList();
+    return;
+  }
+
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
   try {
     const result = await apiGet({
       action: "songs",
-      q: keyword,
+      q: "", // 抓取該語言全部歌曲快取
       language: currentLanguage
     });
     if (!result.success) {
       throw new Error(result.message);
     }
-    allSongs = result.data || [];
+    songCache[currentLanguage] = result.data || [];
+    allSongs = songCache[currentLanguage];
     renderSongList();
   } catch (error) {
     console.error(error);
@@ -1131,7 +1143,7 @@ function renderSongList() {
   let displaySongs = [...allSongs];
   if (keyword) {
     const fuse = new Fuse(allSongs, {
-      keys: ["title", "artist", "song_no"],
+      keys: ["title", "artist", "song_no", "brand"],
       threshold: 0.4,
       ignoreLocation: true
     });
@@ -1170,7 +1182,7 @@ function renderSongList() {
   }).join("");
 }
 /*************************************************
- * 語言篩選
+ * 語言篩選 (切換語言時清除對應快取或重新載入)
  *************************************************/
 function filterLanguage(language, button) {
   currentLanguage = language;
@@ -1185,7 +1197,15 @@ function filterLanguage(language, button) {
  * 加入歌曲
  *************************************************/
 function addSong(songNo) {
-  const song = allSongs.find(s => String(s.song_no) === String(songNo));
+  // 從記憶體中搜尋該首歌
+  let song = null;
+  for (const lang in songCache) {
+    song = songCache[lang].find(s => String(s.song_no) === String(songNo));
+    if (song) break;
+  }
+  if (!song) {
+    song = allSongs.find(s => String(s.song_no) === String(songNo));
+  }
   if (!song) {
     showToast("找不到歌曲");
     return;
@@ -1199,7 +1219,7 @@ function addSong(songNo) {
   showToast(`已點歌：${song.title}`);
 }
 /*************************************************
- * Queue
+ * Queue (內容與歌曲列表一致對齊)
  *************************************************/
 function renderQueue() {
   const list = document.getElementById("queueList");
@@ -1212,11 +1232,11 @@ function renderQueue() {
   list.innerHTML = queue.map((song, index) => `
     <div class="queue-item">
       <div class="queue-number">${index + 1}</div>
-      <div class="song" style="flex:1;margin:0;padding:10px 12px;">
-        <div class="cover" style="width:44px;height:44px;font-size:1.1rem;">🎵</div>
+      <div class="song" style="flex:1;margin:0;">
+        <div class="cover">🎵</div>
         <div class="song-info">
           <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
-          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}</div>
+          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}${song.brand ? " · " + escapeHtml(song.brand) : ""}</div>
         </div>
       </div>
       <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
@@ -1448,7 +1468,7 @@ async function createCustomer() {
   }
 }
 /*************************************************
- * History
+ * History (內容與歌曲列表一致對齊)
  *************************************************/
 async function openHistory() {
   if (!currentCustomer) {
@@ -1472,11 +1492,11 @@ async function openHistory() {
       return;
     }
     list.innerHTML = result.data.map(song => `
-      <div class="song">
+      <div class="song" style="margin:0;">
         <div class="cover">📜</div>
         <div class="song-info">
           <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
-          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}</div>
+          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}${song.brand ? " · " + escapeHtml(song.brand) : ""}</div>
         </div>
         <div class="song-actions">
           <button class="add-btn" onclick="addHistorySong('${escapeJs(song.song_no)}', '${escapeJs(song.title)}', '${escapeJs(song.artist)}', '${escapeJs(song.brand)}', '${escapeJs(song.language)}')">＋ 點歌</button>
