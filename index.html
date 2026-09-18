@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KTV 點歌系統</title>
 <style>
-/* 字體放大約 50% */
+/* 字體設定：比前次放大50%再縮小20%（約為 1.2 倍基礎字體） */
 html {
-  font-size: 150%;
+  font-size: 120%;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -17,11 +17,11 @@ body {
   min-height: 100vh;
 }
 header {
-  height: 90px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 30px;
+  padding: 0 25px;
   background: rgba(10,10,20,.92);
   border-bottom: 1px solid rgba(255,255,255,.08);
   position: sticky;
@@ -30,23 +30,23 @@ header {
   backdrop-filter: blur(12px);
 }
 .logo {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: bold;
   background: linear-gradient(90deg, #ff2bd6, #8c5cff, #22d3ee);
   -webkit-background-clip: text;
   color: transparent;
 }
-.customer-area { display: flex; align-items: center; gap: 12px; }
-.customer-info { color: #bbb; font-size: 0.9rem; }
+.customer-area { display: flex; align-items: center; gap: 10px; }
+.customer-info { color: #bbb; font-size: 0.85rem; }
 .customer-name { color: white; font-weight: bold; }
 .customer-btn {
   background: #29293a;
   color: white;
-  padding: 10px 15px;
-  border-radius: 9px;
+  padding: 8px 12px;
+  border-radius: 8px;
   border: 1px solid #3a3a4d;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 .customer-btn:hover { background: #3b3b50; }
 main { max-width: 1400px; margin: auto; padding: 25px; }
@@ -54,70 +54,74 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
 .search-box { position: relative; }
 .search-box input {
   width: 100%;
-  height: 60px;
+  height: 52px;
   border: 1px solid #38384c;
-  border-radius: 14px;
-  padding: 0 20px 0 54px;
+  border-radius: 12px;
+  padding: 0 20px 0 48px;
   background: #151522;
   color: white;
   outline: none;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 .search-box input:focus { border-color: #9b5cff; box-shadow: 0 0 0 3px rgba(155,92,255,.15); }
-.search-icon { position: absolute; left: 20px; top: 16px; font-size: 1.2rem; color: #999; }
+.search-icon { position: absolute; left: 18px; top: 15px; font-size: 1.1rem; color: #999; }
 .categories { display: flex; gap: 10px; overflow-x: auto; margin-bottom: 25px; padding-bottom: 5px; }
 .category {
   flex-shrink: 0;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: 30px;
   background: #171725;
   color: #aaa;
   border: 1px solid #2d2d3d;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 .category.active { color: white; background: linear-gradient(135deg, #ff2bd6, #744cff); border-color: transparent; }
 .content { display: grid; grid-template-columns: 1fr 420px; gap: 25px; }
-.section-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 18px; }
+.section-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 16px; }
 .song-list { display: grid; gap: 12px; }
+
+/* 統一歌曲、待播、歷史項目的卡片風格 */
 .song {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 16px;
+  gap: 14px;
+  padding: 12px 14px;
   border: 1px solid rgba(255,255,255,.07);
   background: rgba(25,25,38,.75);
-  border-radius: 15px;
+  border-radius: 14px;
   transition: .2s;
 }
 .song:hover { background: #222235; transform: translateY(-1px); }
 .cover {
-  width: 70px;
-  height: 70px;
+  width: 56px;
+  height: 56px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   background: linear-gradient(135deg, #ff2bd6, #653eff);
 }
 .song-info { flex: 1; min-width: 0; }
-.song-title { font-size: 1.1rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.artist { color: #999; font-size: 0.9rem; margin-top: 6px; }
+.song-title { font-size: 1rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.artist { color: #999; font-size: 0.85rem; margin-top: 4px; }
 .song-actions { display: flex; gap: 8px; align-items: center; }
-.favorite { width: 42px; height: 42px; border-radius: 10px; background: #292938; color: #aaa; font-size: 1.2rem; cursor: pointer; border: none; }
+
+.favorite { width: 38px; height: 38px; border-radius: 10px; background: #292938; color: #aaa; font-size: 1.1rem; cursor: pointer; border: none; }
 .favorite.active { color: #ff3e91; }
 .add-btn {
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: 8px 14px;
+  border-radius: 9px;
   color: white;
   background: linear-gradient(135deg, #ff2bd6, #744cff);
   font-weight: bold;
   border: none;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
+
 .queue-panel {
   background: rgba(18,18,29,.9);
   border: 1px solid rgba(255,255,255,.08);
@@ -125,45 +129,45 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
   padding: 20px;
   height: fit-content;
   position: sticky;
-  top: 105px;
+  top: 95px;
 }
-.queue-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.queue-count { color: #aaa; font-size: 0.9rem; }
-.queue-list { display: grid; gap: 10px; max-height: 350px; overflow-y: auto; }
-.queue-item { display: flex; gap: 10px; align-items: center; padding: 12px; border-radius: 12px; background: #20202e; }
-.queue-number { width: 32px; color: #8d7aff; font-weight: bold; text-align: center; font-size: 1rem; }
-.queue-info { flex: 1; min-width: 0; }
-.queue-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1rem; }
-.queue-artist { font-size: 0.85rem; color: #888; margin-top: 3px; }
+.queue-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.queue-count { color: #aaa; font-size: 0.85rem; }
+.queue-list { display: grid; gap: 10px; max-height: 380px; overflow-y: auto; }
+
+/* 待播歌曲項目：與歌曲列表一致的內容結構 */
+.queue-item { display: flex; align-items: center; gap: 10px; }
+.queue-number { width: 26px; color: #8d7aff; font-weight: bold; text-align: center; font-size: 0.95rem; }
 .remove-btn { width: 32px; height: 32px; border-radius: 8px; color: #888; background: transparent; font-size: 1.2rem; border: none; cursor: pointer; }
+
 .player {
   margin-top: 18px;
   background: linear-gradient(135deg, #251040, #111126);
   border-radius: 16px;
-  padding: 18px;
+  padding: 16px;
 }
-.now-playing { color: #aaa; font-size: 0.8rem; margin-bottom: 5px; }
-.current-title { font-size: 1.1rem; font-weight: bold; }
-.current-artist { font-size: 0.9rem; color: #888; margin-top: 3px; }
-audio { width: 100%; margin-top: 12px; }
-.player-controls { display: flex; gap: 8px; margin-top: 15px; }
-.control-btn { flex: 1; height: 45px; border-radius: 10px; background: #29293a; color: white; border: none; cursor: pointer; font-size: 0.95rem; }
+.now-playing { color: #aaa; font-size: 0.75rem; margin-bottom: 4px; }
+.current-title { font-size: 1rem; font-weight: bold; }
+.current-artist { font-size: 0.85rem; color: #888; margin-top: 3px; }
+audio { width: 100%; margin-top: 10px; }
+.player-controls { display: flex; gap: 8px; margin-top: 12px; }
+.control-btn { flex: 1; height: 40px; border-radius: 9px; background: #29293a; color: white; border: none; cursor: pointer; font-size: 0.9rem; }
 .play-btn { background: linear-gradient(135deg, #ff2bd6, #744cff); }
-.volume { margin-top: 12px; }
+.volume { margin-top: 10px; }
 .volume input { width: 100%; }
 .end-service {
   width: 100%;
-  margin-top: 15px;
-  padding: 14px;
-  border-radius: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 9px;
   background: linear-gradient(135deg, #e43b62, #9b2f80);
   color: white;
   font-weight: bold;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
-.empty { color: #777; text-align: center; padding: 30px 10px; font-size: 0.95rem; }
+.empty { color: #777; text-align: center; padding: 25px 10px; font-size: 0.9rem; }
 .toast {
   position: fixed;
   left: 50%;
@@ -171,13 +175,13 @@ audio { width: 100%; margin-top: 12px; }
   transform: translateX(-50%) translateY(20px);
   background: #242435;
   color: white;
-  padding: 14px 24px;
+  padding: 12px 20px;
   border-radius: 30px;
   opacity: 0;
   pointer-events: none;
   transition: .3s;
   z-index: 9999;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .modal {
@@ -199,67 +203,67 @@ audio { width: 100%; margin-top: 12px; }
   background: #171725;
   border: 1px solid #343449;
   border-radius: 18px;
-  padding: 25px;
+  padding: 22px;
   box-shadow: 0 20px 60px rgba(0,0,0,.5);
 }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.modal-title { font-size: 1.2rem; font-weight: bold; }
-.close-btn { width: 38px; height: 38px; border-radius: 8px; background: #292938; color: white; font-size: 1.2rem; border: none; cursor: pointer; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.modal-title { font-size: 1.1rem; font-weight: bold; }
+.close-btn { width: 35px; height: 35px; border-radius: 8px; background: #292938; color: white; font-size: 1.1rem; border: none; cursor: pointer; }
 .modal-input {
   width: 100%;
-  height: 50px;
-  padding: 0 16px;
-  border-radius: 10px;
+  height: 45px;
+  padding: 0 14px;
+  border-radius: 9px;
   border: 1px solid #3a3a4d;
   background: #10101a;
   color: white;
   outline: none;
   margin-bottom: 12px;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .modal-input:focus { border-color: #9b5cff; }
 .primary-btn {
   width: 100%;
-  height: 50px;
-  border-radius: 10px;
+  height: 45px;
+  border-radius: 9px;
   background: linear-gradient(135deg, #ff2bd6, #744cff);
   color: white;
   font-weight: bold;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .secondary-btn {
   width: 100%;
-  height: 50px;
-  border-radius: 10px;
+  height: 45px;
+  border-radius: 9px;
   background: #292938;
   color: white;
   margin-top: 10px;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .customer-result { display: grid; gap: 10px; margin-top: 15px; }
-.customer-card { padding: 16px; background: #222235; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.customer-card-name { font-weight: bold; font-size: 1.1rem; }
-.customer-card-info { color: #888; font-size: 0.85rem; margin-top: 4px; }
+.customer-card { padding: 14px; background: #222235; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.customer-card-name { font-weight: bold; font-size: 1rem; }
+.customer-card-info { color: #888; font-size: 0.8rem; margin-top: 4px; }
 .select-customer {
-  padding: 10px 16px;
-  border-radius: 9px;
+  padding: 8px 14px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #ff2bd6, #744cff);
   color: white;
   flex-shrink: 0;
   border: none;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
-.history-list { display: grid; gap: 12px; margin-top: 15px; }
+.history-list { display: grid; gap: 10px; margin-top: 15px; }
 @media(max-width:900px) {
   .content { grid-template-columns: 1fr; }
   .queue-panel { position: static; }
   header { padding: 0 15px; }
-  .logo { font-size: 1.2rem; }
+  .logo { font-size: 1.1rem; }
   .customer-info { display: none; }
 }
 </style>
@@ -283,7 +287,6 @@ audio { width: 100%; margin-top: 12px; }
     </div>
   </div>
 
-  <!-- 動態載入語言分類按鈕區 -->
   <div class="categories" id="categoryContainer">
     <button class="category active" onclick="filterLanguage('全部', this)">全部</button>
   </div>
@@ -333,7 +336,7 @@ audio { width: 100%; margin-top: 12px; }
     </div>
     <button class="secondary-btn" onclick="showCreateCustomer()">＋ 新增客戶</button>
     <div id="createCustomerArea" style="display:none;margin-top:20px">
-      <div style="color:#aaa;margin-bottom:10px;font-size:0.9rem;">新增客戶</div>
+      <div style="color:#aaa;margin-bottom:8px;font-size:0.85rem;">新增客戶</div>
       <input class="modal-input" id="newCustomerName" placeholder="客戶姓名">
       <input class="modal-input" id="newCustomerPhone" placeholder="電話（選填）">
       <input class="modal-input" id="newCustomerNote" placeholder="備註（選填）">
@@ -348,7 +351,7 @@ audio { width: 100%; margin-top: 12px; }
       <div class="modal-title">📜 歷史歌單</div>
       <button class="close-btn" onclick="closeHistoryModal()">×</button>
     </div>
-    <div id="historyCustomerName" style="color:#aaa;margin-bottom:10px;font-size:0.95rem;"></div>
+    <div id="historyCustomerName" style="color:#aaa;margin-bottom:10px;font-size:0.9rem;"></div>
     <div class="history-list" id="historyList">
       <div class="empty">載入中...</div>
     </div>
@@ -377,17 +380,14 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("searchInput").addEventListener("input", function() {
     clearTimeout(searchTimer);
     const keyword = this.value.trim();
-    
-    // 如果關鍵字太短且不是純數字，先清空列表加快並避免伺服器負擔
     if (keyword.length === 0) {
       document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
       allSongs = [];
       return;
     }
-
     searchTimer = setTimeout(() => {
       fetchSongs(keyword);
-    }, 250); // 縮短防手殘時間為 250ms 提升流暢度
+    }, 250);
   });
 
   document.getElementById("customerSearch").addEventListener("input", function() {
@@ -418,7 +418,6 @@ async function apiPost(data) {
   return response.json();
 }
 
-// 動態載入語言選單
 async function loadLanguages() {
   try {
     const result = await apiGet({ action: "languages" });
@@ -496,6 +495,7 @@ function addSong(songNo) {
   showToast(`已點歌：${song.title}`);
 }
 
+// 待播歌曲渲染：與歌曲列表風格完全一致，並帶有編號與移除鈕
 function renderQueue() {
   const list = document.getElementById("queueList");
   const count = document.getElementById("queueCount");
@@ -509,9 +509,12 @@ function renderQueue() {
   list.innerHTML = queue.map((song, index) => `
     <div class="queue-item">
       <div class="queue-number">${index + 1}</div>
-      <div class="queue-info">
-        <div class="queue-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
-        <div class="queue-artist">${escapeHtml(song.artist)}</div>
+      <div class="song" style="flex: 1; margin: 0; padding: 10px 12px;">
+        <div class="cover" style="width: 44px; height: 44px; font-size: 1.1rem;">🎵</div>
+        <div class="song-info">
+          <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
+          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}${song.brand ? " · " + escapeHtml(song.brand) : ""}</div>
+        </div>
       </div>
       <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
     </div>
@@ -690,6 +693,7 @@ async function createCustomer() {
   }
 }
 
+// 歷史歌單渲染：與歌曲列表完全一致的卡片風格（含圖示、歌號、歌名、歌手、語言、品牌與點歌按鈕）
 async function openHistory() {
   if (!currentCustomer) {
     showToast("請先選擇客戶");
@@ -707,7 +711,6 @@ async function openHistory() {
       list.innerHTML = `<div class="empty">此客戶目前沒有歷史歌單</div>`;
       return;
     }
-    // 歷史歌單排版對齊主畫面歌曲列表風格
     list.innerHTML = result.data.map(song => `
       <div class="song">
         <div class="cover">📜</div>
