@@ -18,6 +18,54 @@ body {
   color: #fff;
   min-height: 100vh;
 }
+
+/* 登入驗證遮罩 */
+#authOverlay {
+  position: fixed;
+  inset: 0;
+  background: #0b0b16;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.auth-box {
+  width: 100%;
+  max-width: 480px;
+  background: #171725;
+  border: 1px solid #343449;
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.7);
+}
+.auth-logo { font-size: 2rem; margin-bottom: 10px; }
+.auth-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 8px; }
+.auth-desc { color: #999; font-size: 0.9rem; margin-bottom: 25px; line-height: 1.5; }
+.auth-status {
+  padding: 14px;
+  border-radius: 12px;
+  background: #222235;
+  color: #ccc;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  border: 1px solid #2d2d3d;
+}
+.auth-btn {
+  width: 100%;
+  height: 50px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  color: white;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: .2s;
+}
+.auth-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
 header {
   height: 80px;
   display: flex;
@@ -68,7 +116,6 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
 .search-box input:focus { border-color: #9b5cff; box-shadow: 0 0 0 3px rgba(155,92,255,.15); }
 .search-icon { position: absolute; left: 18px; top: 15px; font-size: 1.1rem; color: #999; }
 
-/* 排序選單樣式 */
 .sort-box select {
   height: 52px;
   padding: 0 16px;
@@ -98,7 +145,6 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
 .section-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 16px; }
 .song-list { display: grid; gap: 12px; }
 
-/* 統一歌曲、待播、歷史項目的卡片風格 */
 .song {
   display: flex;
   align-items: center;
@@ -152,7 +198,6 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
 .queue-count { color: #aaa; font-size: 0.85rem; }
 .queue-list { display: grid; gap: 10px; max-height: 380px; overflow-y: auto; }
 
-/* 待播歌曲項目：與歌曲列表一致的內容結構 */
 .queue-item { display: flex; align-items: center; gap: 10px; }
 .queue-number { width: 26px; color: #8d7aff; font-weight: bold; text-align: center; font-size: 0.95rem; }
 .remove-btn { width: 32px; height: 32px; border-radius: 8px; color: #888; background: transparent; font-size: 1.2rem; border: none; cursor: pointer; }
@@ -287,6 +332,17 @@ audio { width: 100%; margin-top: 10px; }
 </head>
 <body>
 
+<!-- 登入驗證頁面 (遮罩) -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">🎤</div>
+    <div class="auth-title">KTV 點歌系統驗證</div>
+    <div class="auth-desc">系統將自動比對您的網域 IP 或 GPS 定位，確認您位於公司授權據點範圍內。</div>
+    <div class="auth-status" id="authStatus">準備進行據點權限驗證...</div>
+    <button class="auth-btn" id="authBtn" onclick="startVerification()">開始驗證</button>
+  </div>
+</div>
+
 <header>
   <div class="logo">🎤 KTV 點歌系統</div>
   <div class="customer-area">
@@ -387,7 +443,7 @@ audio { width: 100%; margin-top: 10px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyrYhsRlIZ7Wn4i1HikEjG-QP77HvfpGVhL5LafiBLnogeXVvo_gayC_6bnaSJaZySUnw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyPfQWyR5mktC3-b5Uqx89KQ2YQVW4tmfV6jvK17ViH196NSbgtneqpEttkXz2kjw7bUw/exec";
 
 let allSongs = [];
 let currentLanguage = "全部";
@@ -400,6 +456,9 @@ let customerSearchTimer = null;
 let lastKeyword = "";
 
 window.addEventListener("DOMContentLoaded", () => {
+  // 自動執行登入驗證
+  startVerification();
+
   renderQueue();
   loadLanguages();
   document.getElementById("audioPlayer").volume = 0.8;
@@ -435,6 +494,100 @@ window.addEventListener("DOMContentLoaded", () => {
     }, 250);
   });
 });
+
+// 計算兩點間距離 (公尺)
+function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // 地球半徑 (公尺)
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+
+// 執行據點驗證 (IP 或 GPS 擇一成立)
+async function startVerification() {
+  const statusEl = document.getElementById("authStatus");
+  const btnEl = document.getElementById("authBtn");
+  statusEl.textContent = "正在取得您的網路 IP 與 GPS 定位...";
+  btnEl.disabled = true;
+
+  try {
+    // 1. 取得後端資料（包含公司據點設定與使用者的對外 IP）
+    const res = await apiGet({ action: "locations" });
+    if (!res.success) throw new Error(res.message || "無法取得驗證資料");
+
+    const clientIp = res.clientIp || "";
+    const locations = res.locations || [];
+
+    if (locations.length === 0) {
+      throw new Error("工作表中找不到任何啟用的公司據點設定！");
+    }
+
+    // 2. 嘗試取得使用者 GPS 座標
+    let userLat = null, userLon = null;
+    try {
+      const position = await new Promise((resolve, reject) => {
+        if (!navigator.geolocation) reject(new Error("瀏覽器不支援定位"));
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          timeout: 10000,
+          enableHighAccuracy: true
+        });
+      });
+      userLat = position.coords.latitude;
+      userLon = position.coords.longitude;
+    } catch (geoErr) {
+      console.warn("GPS 定位失敗或拒絕：", geoErr.message);
+    }
+
+    // 3. 進行比對（IP 或 GPS 只要一個符合即可）
+    let verified = false;
+    let matchedName = "";
+
+    for (let loc of locations) {
+      // 比對 IP
+      if (clientIp && loc.ip && clientIp.trim() === loc.ip.trim()) {
+        verified = true;
+        matchedName = loc.name;
+        break;
+      }
+
+      // 比對 GPS 距離
+      if (userLat !== null && userLon !== null && loc.lat && loc.lon) {
+        const distance = getDistanceFromLatLonInM(userLat, userLon, parseFloat(loc.lat), parseFloat(loc.lon));
+        if (distance <= parseFloat(loc.allowDistance)) {
+          verified = true;
+          matchedName = loc.name;
+          break;
+        }
+      }
+    }
+
+    if (verified) {
+      statusEl.innerHTML = `<span style="color:#22c55e;font-weight:bold;">✔ 驗證成功！</span><br>您已成功連線至據點：${escapeHtml(matchedName)}`;
+      setTimeout(() => {
+        document.getElementById("authOverlay").style.display = "none";
+      }, 1200);
+    } else {
+      statusEl.innerHTML = `<span style="color:#ef4444;font-weight:bold;">✖ 驗證失敗</span><br>您的 IP (${escapeHtml(clientIp)}) 或目前 GPS 位置不在任何授權公司據點範圍內。`;
+      btnEl.disabled = false;
+      btnEl.textContent = "重新驗證";
+    }
+
+  } catch (error) {
+    console.error(error);
+    statusEl.innerHTML = `<span style="color:#ef4444;font-weight:bold;">驗證發生錯誤</span><br>${escapeHtml(error.message)}`;
+    btnEl.disabled = false;
+    btnEl.textContent = "重試";
+  }
+}
 
 async function apiGet(params) {
   const query = new URLSearchParams(params);
