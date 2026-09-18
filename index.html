@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KTV 點歌系統</title>
+<!-- 引入 Fuse.js 用於智慧模糊搜尋、錯別字容錯與拼音對應 -->
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <style>
-/* 字體設定：比前次放大50%再縮小20%（約為 1.2 倍基礎字體） */
+/* 字體設定：放大至 130% */
 html {
   font-size: 130%;
 }
@@ -385,7 +387,7 @@ audio { width: 100%; margin-top: 10px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyrYhsRlIZ7Wn4i1HikEjG-QP77HvfpGVhL5LafiBLnogeXVvo_gayC_6bnaSJaZySUnw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxhvrs_zWhqUkHkJ-_vUJGGP-0q1Hy6LRWVAew45npRyAdlvBeCXgrS8elKjb4qEXh5Cw/exec";
 
 let allSongs = [];
 let currentLanguage = "全部";
@@ -395,6 +397,7 @@ let favorites = JSON.parse(localStorage.getItem("ktvFavorites") || "[]");
 let currentSong = null;
 let searchTimer = null;
 let customerSearchTimer = null;
+let lastKeyword = "";
 
 window.addEventListener("DOMContentLoaded", () => {
   renderQueue();
@@ -407,10 +410,16 @@ window.addEventListener("DOMContentLoaded", () => {
     if (keyword.length === 0) {
       document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
       allSongs = [];
+      lastKeyword = "";
       return;
     }
     searchTimer = setTimeout(() => {
-      fetchSongs(keyword);
+      if (keyword !== lastKeyword) {
+        lastKeyword = keyword;
+        fetchSongs(keyword);
+      } else {
+        renderSongList();
+      }
     }, 250);
   });
 
@@ -482,10 +491,20 @@ function renderSongList() {
     return;
   }
 
-  // 複製一份陣列進行排序處理
+  const keyword = document.getElementById("searchInput").value.trim();
   let displaySongs = [...allSongs];
-  const sortType = document.getElementById("sortSelect").value;
 
+  if (keyword) {
+    const fuse = new Fuse(allSongs, {
+      keys: ["title", "artist", "song_no"],
+      threshold: 0.4,
+      ignoreLocation: true
+    });
+    const fuzzyResults = fuse.search(keyword);
+    displaySongs = fuzzyResults.map(result => result.item);
+  }
+
+  const sortType = document.getElementById("sortSelect").value;
   if (sortType === "title_len_asc") {
     displaySongs.sort((a, b) => String(a.title || "").length - String(b.title || "").length);
   } else if (sortType === "title_len_desc") {
@@ -494,6 +513,11 @@ function renderSongList() {
     displaySongs.sort((a, b) => String(a.artist || "").length - String(b.artist || "").length);
   } else if (sortType === "artist_len_desc") {
     displaySongs.sort((a, b) => String(b.artist || "").length - String(a.artist || "").length);
+  }
+
+  if (displaySongs.length === 0) {
+    list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
+    return;
   }
 
   list.innerHTML = displaySongs.map(song => {
