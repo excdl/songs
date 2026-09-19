@@ -404,25 +404,15 @@ window.addEventListener("DOMContentLoaded", () => {
   loadLanguages();
   document.getElementById("audioPlayer").volume = 0.8;
 
-  // 網頁初始載入時保持空白提示，不主動載入「全部」大批資料
-  document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或點選上方分類標籤瀏覽</div>`;
-
   document.getElementById("searchInput").addEventListener("input", function() {
     clearTimeout(searchTimer);
     const keyword = this.value.trim();
-    
     if (keyword.length === 0) {
+      document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
+      allSongs = [];
       lastKeyword = "";
-      // 如果搜尋欄被清空，且當前分類是「全部」，則不顯示歌曲；若為其他特定分類，則自動顯示該分類歌曲
-      if (currentLanguage === "全部") {
-        document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
-        allSongs = [];
-      } else {
-        fetchSongs("");
-      }
       return;
     }
-
     searchTimer = setTimeout(() => {
       if (keyword !== lastKeyword) {
         lastKeyword = keyword;
@@ -445,48 +435,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }, 250);
   });
 });
-
-async function fetchSongs(keyword = "") {
-  const list = document.getElementById("songList");
-  
-  // 如果搜尋欄為空，且分類是「全部」，則直接攔截不發送請求，避免載入過多資料
-  if (!keyword && currentLanguage === "全部") {
-    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
-    allSongs = [];
-    return;
-  }
-
-  list.innerHTML = `<div class="empty">載入中...</div>`;
-  try {
-    const result = await apiGet({ action: "songs", q: keyword, language: currentLanguage });
-    if (!result.success) throw new Error(result.message);
-    allSongs = result.data || [];
-    renderSongList();
-  } catch (error) {
-    console.error(error);
-    list.innerHTML = `<div class="empty">歌曲載入失敗</div>`;
-  }
-}
-
-function filterLanguage(language, button) {
-  currentLanguage = language;
-  document.querySelectorAll(".category").forEach(btn => btn.classList.remove("active"));
-  button.classList.add("active");
-  
-  const keyword = document.getElementById("searchInput").value.trim();
-  
-  // 核心邏輯：
-  // 1. 若點擊「全部」且搜尋欄是空的 -> 不自動載入，維持提示。
-  // 2. 若點擊「其他分類」且搜尋欄是空的 -> 自動幫用戶載入該分類下的歌曲。
-  // 3. 若搜尋欄有字 -> 帶入關鍵字與新分類去撈取資料。
-  if (!keyword && currentLanguage === "全部") {
-    document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
-    allSongs = [];
-    return;
-  }
-
-  fetchSongs(keyword);
-}
 
 async function apiGet(params) {
   const query = new URLSearchParams(params);
