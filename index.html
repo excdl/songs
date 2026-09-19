@@ -152,7 +152,6 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
 .queue-count { color: #aaa; font-size: 0.85rem; }
 .queue-list { display: grid; gap: 10px; max-height: 380px; overflow-y: auto; }
 
-/* 待播歌曲項目：與歌曲列表一致的內容結構 */
 .queue-item { display: flex; align-items: center; gap: 10px; }
 .queue-number { width: 26px; color: #8d7aff; font-weight: bold; text-align: center; font-size: 0.95rem; }
 .remove-btn { width: 32px; height: 32px; border-radius: 8px; color: #888; background: transparent; font-size: 1.2rem; border: none; cursor: pointer; }
@@ -314,14 +313,14 @@ audio { width: 100%; margin-top: 10px; }
   </div>
 
   <div class="categories" id="categoryContainer">
-    <button class="category active" onclick="filterLanguage('全部', this)">全部</button>
+    <button class="category active" onclick="filterCategory('全部', this)">全部</button>
   </div>
 
   <div class="content">
     <section>
       <div class="section-title">🎵 歌曲列表</div>
       <div class="song-list" id="songList">
-        <div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>
+        <div class="empty">請輸入歌名、歌手或歌號開始搜尋，或點選上方分類</div>
       </div>
     </section>
 
@@ -387,11 +386,11 @@ audio { width: 100%; margin-top: 10px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzvmKUtJWQMA7uFvm9FqikgJwkAgzyne3L5MaDb78bBg5KfoQNCxIqzHed8SCj5SBu8nw/exec";
+// 請確保此處為您的 Google Apps Script 最新部署網址
+const API_URL = "https://script.google.com/macros/s/AKfycbzXnDxJlgM89lvPSQa_kMahjpAD-c7AeNttYhiaRbw_SNjyyhXmwdvlMXrd5FpNI0Re1A/exec";
 
 let allSongs = [];
-let currentLanguage = "全部";
-let currentCategory = "全部"; // 新增分類狀態
+let currentCategory = "全部"; 
 let currentCustomer = null;
 let queue = JSON.parse(localStorage.getItem("ktvQueue") || "[]");
 let favorites = JSON.parse(localStorage.getItem("ktvFavorites") || "[]");
@@ -402,14 +401,13 @@ let lastKeyword = "";
 
 window.addEventListener("DOMContentLoaded", () => {
   renderQueue();
-  loadCategories(); // 改為載入分類
+  loadCategories(); 
   document.getElementById("audioPlayer").volume = 0.8;
 
   document.getElementById("searchInput").addEventListener("input", function() {
     clearTimeout(searchTimer);
     const keyword = this.value.trim();
     
-    // 如果清空輸入框，且沒有選定分類，則清空列表
     if (keyword.length === 0 && currentCategory === "全部") {
       document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋，或點選上方分類</div>`;
       allSongs = [];
@@ -418,7 +416,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     searchTimer = setTimeout(() => {
-      // 修正閃退/第二次才能搜尋的問題：確保只要有變動或切換類別就重新抓取資料
       lastKeyword = keyword;
       fetchSongs(keyword);
     }, 250);
@@ -482,7 +479,6 @@ async function fetchSongs(keyword = "") {
     const result = await apiGet({ 
       action: "songs", 
       q: keyword, 
-      language: currentLanguage,
       category: currentCategory 
     });
     
@@ -501,7 +497,6 @@ function filterCategory(category, button) {
   if (button) button.classList.add("active");
 
   const keyword = document.getElementById("searchInput").value.trim();
-  // 點選分類後立即觸發搜尋
   fetchSongs(keyword);
 }
 
@@ -515,7 +510,6 @@ function renderSongList() {
   const keyword = document.getElementById("searchInput").value.trim();
   let displaySongs = [...allSongs];
 
-  // 如果有輸入關鍵字，使用 Fuse.js 做模糊搜尋
   if (keyword && typeof Fuse !== "undefined") {
     try {
       const fuse = new Fuse(allSongs, {
