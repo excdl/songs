@@ -387,10 +387,11 @@ audio { width: 100%; margin-top: 10px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyrYhsRlIZ7Wn4i1HikEjG-QP77HvfpGVhL5LafiBLnogeXVvo_gayC_6bnaSJaZySUnw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbycgaIDViafMGVHissjROSPoIvXtzT1XKLSsKsYAfPArxzGpmwLx8n8gaTFdWM0Qt_bvg/exec";
 
 let allSongs = [];
 let currentLanguage = "全部";
+let currentCategory = "全部"; // 新增分類狀態
 let currentCustomer = null;
 let queue = JSON.parse(localStorage.getItem("ktvQueue") || "[]");
 let favorites = JSON.parse(localStorage.getItem("ktvFavorites") || "[]");
@@ -401,25 +402,25 @@ let lastKeyword = "";
 
 window.addEventListener("DOMContentLoaded", () => {
   renderQueue();
-  loadLanguages();
+  loadCategories(); // 改為載入分類
   document.getElementById("audioPlayer").volume = 0.8;
 
   document.getElementById("searchInput").addEventListener("input", function() {
     clearTimeout(searchTimer);
     const keyword = this.value.trim();
-    if (keyword.length === 0) {
-      document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
+    
+    // 如果清空輸入框，且沒有選定分類，則清空列表
+    if (keyword.length === 0 && currentCategory === "全部") {
+      document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋，或點選上方分類</div>`;
       allSongs = [];
       lastKeyword = "";
       return;
     }
+
     searchTimer = setTimeout(() => {
-      if (keyword !== lastKeyword) {
-        lastKeyword = keyword;
-        fetchSongs(keyword);
-      } else {
-        renderSongList();
-      }
+      // 修正閃退/第二次才能搜尋的問題：確保只要有變動或切換類別就重新抓取資料
+      lastKeyword = keyword;
+      fetchSongs(keyword);
     }, 250);
   });
 
@@ -451,30 +452,40 @@ async function apiPost(data) {
   return response.json();
 }
 
-async function loadLanguages() {
+async function loadCategories() {
   try {
-    const result = await apiGet({ action: "languages" });
+    const result = await apiGet({ action: "categories" });
     if (result.success && result.data) {
       const container = document.getElementById("categoryContainer");
-      container.innerHTML = result.data.map(lang => `
-        <button class="category ${lang === currentLanguage ? "active" : ""}" onclick="filterLanguage('${escapeJs(lang)}', this)">${escapeHtml(lang)}</button>
-      `).join("");
+      if (container) {
+        container.innerHTML = result.data.map(cat => `
+          <button class="category ${cat === currentCategory ? "active" : ""}" onclick="filterCategory('${escapeJs(cat)}', this)">${escapeHtml(cat)}</button>
+        `).join("");
+      }
     }
   } catch (error) {
-    console.error("載入語言失敗", error);
+    console.error("載入分類失敗", error);
   }
 }
 
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
-  if (!keyword) {
-    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
+  
+  if (!keyword && currentCategory === "全部") {
+    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋，或點選上方分類</div>`;
     allSongs = [];
     return;
   }
+
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
   try {
-    const result = await apiGet({ action: "songs", q: keyword, language: currentLanguage });
+    const result = await apiGet({ 
+      action: "songs", 
+      q: keyword, 
+      language: currentLanguage,
+      category: currentCategory 
+    });
+    
     if (!result.success) throw new Error(result.message);
     allSongs = result.data || [];
     renderSongList();
@@ -484,9 +495,19 @@ async function fetchSongs(keyword = "") {
   }
 }
 
+function filterCategory(category, button) {
+  currentCategory = category;
+  document.querySelectorAll(".category").forEach(btn => btn.classList.remove("active"));
+  if (button) button.classList.add("active");
+
+  const keyword = document.getElementById("searchInput").value.trim();
+  // 點選分類後立即觸發搜尋
+  fetchSongs(keyword);
+}
+
 function renderSongList() {
   const list = document.getElementById("songList");
-  if (allSongs.length === 0) {
+  if (!allSongs || allSongs.length === 0) {
     list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
     return;
   }
@@ -494,17 +515,24 @@ function renderSongList() {
   const keyword = document.getElementById("searchInput").value.trim();
   let displaySongs = [...allSongs];
 
-  if (keyword) {
-    const fuse = new Fuse(allSongs, {
-      keys: ["title", "artist", "song_no"],
-      threshold: 0.4,
-      ignoreLocation: true
-    });
-    const fuzzyResults = fuse.search(keyword);
-    displaySongs = fuzzyResults.map(result => result.item);
+  // 如果有輸入關鍵字，使用 Fuse.js 做模糊搜尋
+  if (keyword && typeof Fuse !== "undefined") {
+    try {
+      const fuse = new Fuse(allSongs, {
+        keys: ["title", "artist", "song_no"],
+        threshold: 0.4,
+        ignoreLocation: true
+      });
+      const fuzzyResults = fuse.search(keyword);
+      displaySongs = fuzzyResults.map(result => result.item);
+    } catch (e) {
+      console.error("Fuse search error:", e);
+    }
   }
 
-  const sortType = document.getElementById("sortSelect").value;
+  const sortSelect = document.getElementById("sortSelect");
+  const sortType = sortSelect ? sortSelect.value : "";
+  
   if (sortType === "title_len_asc") {
     displaySongs.sort((a, b) => String(a.title || "").length - String(b.title || "").length);
   } else if (sortType === "title_len_desc") {
@@ -538,14 +566,6 @@ function renderSongList() {
   }).join("");
 }
 
-function filterLanguage(language, button) {
-  currentLanguage = language;
-  document.querySelectorAll(".category").forEach(btn => btn.classList.remove("active"));
-  button.classList.add("active");
-  const keyword = document.getElementById("searchInput").value.trim();
-  if (keyword) fetchSongs(keyword);
-}
-
 function addSong(songNo) {
   const song = allSongs.find(s => String(s.song_no) === String(songNo));
   if (!song) {
@@ -561,7 +581,9 @@ function addSong(songNo) {
 function renderQueue() {
   const list = document.getElementById("queueList");
   const count = document.getElementById("queueCount");
-  count.textContent = `${queue.length} 首`;
+  if (count) count.textContent = `${queue.length} 首`;
+
+  if (!list) return;
 
   if (queue.length === 0) {
     list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>選擇歌曲開始點歌吧 🎤</div>`;
@@ -622,13 +644,19 @@ function nextSong() {
   playCurrent();
 }
 
-document.getElementById("audioPlayer").addEventListener("ended", () => {
-  nextSong();
-});
+const audioPlayerEl = document.getElementById("audioPlayer");
+if (audioPlayerEl) {
+  audioPlayerEl.addEventListener("ended", () => {
+    nextSong();
+  });
+}
 
-document.getElementById("volume").addEventListener("input", function() {
-  document.getElementById("audioPlayer").volume = this.value;
-});
+const volumeEl = document.getElementById("volume");
+if (volumeEl) {
+  volumeEl.addEventListener("input", function() {
+    document.getElementById("audioPlayer").volume = this.value;
+  });
+}
 
 function toggleFavorite(songNo) {
   songNo = String(songNo);
@@ -702,13 +730,14 @@ function selectCustomer(customerId, name) {
 function updateCustomerUI() {
   const info = document.getElementById("customerInfo");
   const clearBtn = document.getElementById("clearCustomerBtn");
+  if (!info) return;
   if (!currentCustomer) {
     info.textContent = "尚未選擇客戶";
-    clearBtn.style.display = "none";
+    if (clearBtn) clearBtn.style.display = "none";
     return;
   }
   info.innerHTML = `目前客戶：<span class="customer-name">${escapeHtml(currentCustomer.name)}</span>`;
-  clearBtn.style.display = "block";
+  if (clearBtn) clearBtn.style.display = "block";
 }
 
 function clearCustomer() {
@@ -723,7 +752,9 @@ function clearCustomer() {
 
 function showCreateCustomer() {
   const area = document.getElementById("createCustomerArea");
-  area.style.display = area.style.display === "none" ? "block" : "none";
+  if (area) {
+    area.style.display = area.style.display === "none" ? "block" : "none";
+  }
 }
 
 async function createCustomer() {
@@ -851,6 +882,7 @@ async function endService() {
 let toastTimer;
 function showToast(message) {
   const toast = document.getElementById("toast");
+  if (!toast) return;
   toast.textContent = message;
   toast.classList.add("show");
   clearTimeout(toastTimer);
