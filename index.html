@@ -133,7 +133,7 @@ main {
 .quick-row {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap; /* 改為自動換行，不使用橫向捲軸 */
+  flex-wrap: wrap; /* 自動換行，不跨頁 */
   padding-bottom: 4px;
 }
 .category {
@@ -568,7 +568,6 @@ audio {
   </div>
   <div class="quick-search">
     <div class="quick-title">🌐 快速語言搜尋</div>
-    <!-- 移除了寫死的全部按鈕，避免與 JS 載入重複 -->
     <div class="quick-row" id="languageContainer"></div>
   </div>
   <div class="quick-search">
