@@ -823,18 +823,38 @@ async function startAccessVerification() {
   }
   if (status) {
     status.className = "auth-status";
-    status.textContent = "正在取得目前位置，請稍候...";
+    status.textContent = "正在取得目前位置與網路資訊，請稍候...";
   }
+  
+  let latitude = null;
+  let longitude = null;
+
   try {
-    const position = await getCurrentPosition();
-    if (status) {
-      status.textContent = "GPS 已取得，正在驗證工作據點...";
+    // 嘗試取得 GPS，如果失敗或被拒絕，不要讓整個流程中斷，改給 null
+    const position = await getCurrentPosition().catch(err => {
+      console.warn("GPS 取得失敗，將僅嘗試以 IP 驗證", err);
+      return null;
+    });
+
+    if (position) {
+      latitude = position.coords.latitude;
+      longitude = position.coords.longitude;
+      if (status) {
+        status.textContent = "GPS 已取得，正在驗證工作據點...";
+      }
+    } else {
+      if (status) {
+        status.textContent = "未啟用 GPS，正在嘗試以公司 IP 驗證...";
+      }
     }
+
     const ip = await getPublicIP();
-    const result = await verifyAccess(position.coords.latitude, position.coords.longitude, ip);
+    const result = await verifyAccess(latitude, longitude, ip);
+    
     if (!result.success || !result.accessGranted) {
       throw new Error(result.message || "目前不在允許的工作據點");
     }
+    
     saveAccessSession(result.token, result.expiresIn, result.location);
     showMainApp();
     startVerificationTimer();
