@@ -133,7 +133,7 @@ main {
 .quick-row {
   display: flex;
   gap: 8px;
-  overflow-x: auto;
+  flex-wrap: wrap; /* 改為自動換行，不使用橫向捲軸 */
   padding-bottom: 4px;
 }
 .category {
@@ -536,7 +536,7 @@ audio {
     display: none;
   }
 }
-   #categoryContainer {
+#categoryContainer {
   display: none !important;
 }
 </style>
@@ -568,15 +568,12 @@ audio {
   </div>
   <div class="quick-search">
     <div class="quick-title">🌐 快速語言搜尋</div>
-    <div class="quick-row" id="languageContainer">
-      <button class="category active" onclick="filterLanguage('全部', this)">全部</button>
-    </div>
+    <!-- 移除了寫死的全部按鈕，避免與 JS 載入重複 -->
+    <div class="quick-row" id="languageContainer"></div>
   </div>
   <div class="quick-search">
     <div class="quick-title">🎵 快速分類搜尋</div>
-    <div class="quick-row" id="categoryContainer">
-      <button class="category active" onclick="filterCategory('全部', this)">全部</button>
-    </div>
+    <div class="quick-row" id="categoryContainer"></div>
   </div>
   <div class="content">
     <section>
