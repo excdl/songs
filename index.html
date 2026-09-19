@@ -4,14 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KTV 點歌系統</title>
-<!-- 引入 Fuse.js 用於智慧模糊搜尋、錯別字容錯與拼音對應 -->
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <style>
-/* 字體設定：放大至 130% */
 html {
   font-size: 130%;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 body {
   font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
   background: radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
@@ -38,9 +40,19 @@ header {
   -webkit-background-clip: text;
   color: transparent;
 }
-.customer-area { display: flex; align-items: center; gap: 10px; }
-.customer-info { color: #bbb; font-size: 0.85rem; }
-.customer-name { color: white; font-weight: bold; }
+.customer-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.customer-info {
+  color: #bbb;
+  font-size: 0.85rem;
+}
+.customer-name {
+  color: white;
+  font-weight: bold;
+}
 .customer-btn {
   background: #29293a;
   color: white;
@@ -50,10 +62,26 @@ header {
   cursor: pointer;
   font-size: 0.85rem;
 }
-.customer-btn:hover { background: #3b3b50; }
-main { max-width: 1400px; margin: auto; padding: 25px; }
-.search-area { margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.search-box { position: relative; flex: 1; min-width: 250px; }
+.customer-btn:hover {
+  background: #3b3b50;
+}
+main {
+  max-width: 1400px;
+  margin: auto;
+  padding: 25px;
+}
+.search-area {
+  margin-bottom: 15px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 250px;
+}
 .search-box input {
   width: 100%;
   height: 52px;
@@ -65,10 +93,17 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
   outline: none;
   font-size: 1rem;
 }
-.search-box input:focus { border-color: #9b5cff; box-shadow: 0 0 0 3px rgba(155,92,255,.15); }
-.search-icon { position: absolute; left: 18px; top: 15px; font-size: 1.1rem; color: #999; }
-
-/* 排序選單樣式 */
+.search-box input:focus {
+  border-color: #9b5cff;
+  box-shadow: 0 0 0 3px rgba(155,92,255,.15);
+}
+.search-icon {
+  position: absolute;
+  left: 18px;
+  top: 15px;
+  font-size: 1.1rem;
+  color: #999;
+}
 .sort-box select {
   height: 52px;
   padding: 0 16px;
@@ -80,9 +115,27 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
   font-size: 0.95rem;
   cursor: pointer;
 }
-.sort-box select:focus { border-color: #9b5cff; }
-
-.categories { display: flex; gap: 10px; overflow-x: auto; margin-bottom: 25px; padding-bottom: 5px; }
+.sort-box select:focus {
+  border-color: #9b5cff;
+}
+.quick-search {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(18,18,29,.75);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 15px;
+}
+.quick-title {
+  color: #aaa;
+  font-size: 0.82rem;
+  margin-bottom: 10px;
+}
+.quick-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
 .category {
   flex-shrink: 0;
   padding: 8px 16px;
@@ -91,14 +144,32 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
   color: #aaa;
   border: 1px solid #2d2d3d;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  transition: .2s;
 }
-.category.active { color: white; background: linear-gradient(135deg, #ff2bd6, #744cff); border-color: transparent; }
-.content { display: grid; grid-template-columns: 1fr 420px; gap: 25px; }
-.section-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 16px; }
-.song-list { display: grid; gap: 12px; }
-
-/* 統一歌曲、待播、歷史項目的卡片風格 */
+.category:hover {
+  background: #29293d;
+  color: white;
+}
+.category.active {
+  color: white;
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  border-color: transparent;
+}
+.content {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 25px;
+}
+.section-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+.song-list {
+  display: grid;
+  gap: 12px;
+}
 .song {
   display: flex;
   align-items: center;
@@ -109,7 +180,10 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
   border-radius: 14px;
   transition: .2s;
 }
-.song:hover { background: #222235; transform: translateY(-1px); }
+.song:hover {
+  background: #222235;
+  transform: translateY(-1px);
+}
 .cover {
   width: 56px;
   height: 56px;
@@ -121,13 +195,40 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
   font-size: 1.3rem;
   background: linear-gradient(135deg, #ff2bd6, #653eff);
 }
-.song-info { flex: 1; min-width: 0; }
-.song-title { font-size: 1rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.artist { color: #999; font-size: 0.85rem; margin-top: 4px; }
-.song-actions { display: flex; gap: 8px; align-items: center; }
-
-.favorite { width: 38px; height: 38px; border-radius: 10px; background: #292938; color: #aaa; font-size: 1.1rem; cursor: pointer; border: none; }
-.favorite.active { color: #ff3e91; }
+.song-info {
+  flex: 1;
+  min-width: 0;
+}
+.song-title {
+  font-size: 1rem;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.artist {
+  color: #999;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+.song-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.favorite {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #292938;
+  color: #aaa;
+  font-size: 1.1rem;
+  cursor: pointer;
+  border: none;
+}
+.favorite.active {
+  color: #ff3e91;
+}
 .add-btn {
   padding: 8px 14px;
   border-radius: 9px;
@@ -138,7 +239,6 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
   cursor: pointer;
   font-size: 0.85rem;
 }
-
 .queue-panel {
   background: rgba(18,18,29,.9);
   border: 1px solid rgba(255,255,255,.08);
@@ -148,29 +248,92 @@ main { max-width: 1400px; margin: auto; padding: 25px; }
   position: sticky;
   top: 95px;
 }
-.queue-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.queue-count { color: #aaa; font-size: 0.85rem; }
-.queue-list { display: grid; gap: 10px; max-height: 380px; overflow-y: auto; }
-
-.queue-item { display: flex; align-items: center; gap: 10px; }
-.queue-number { width: 26px; color: #8d7aff; font-weight: bold; text-align: center; font-size: 0.95rem; }
-.remove-btn { width: 32px; height: 32px; border-radius: 8px; color: #888; background: transparent; font-size: 1.2rem; border: none; cursor: pointer; }
-
+.queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.queue-count {
+  color: #aaa;
+  font-size: 0.85rem;
+}
+.queue-list {
+  display: grid;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.queue-number {
+  width: 26px;
+  color: #8d7aff;
+  font-weight: bold;
+  text-align: center;
+  font-size: 0.95rem;
+}
+.remove-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #888;
+  background: transparent;
+  font-size: 1.2rem;
+  border: none;
+  cursor: pointer;
+}
 .player {
   margin-top: 18px;
   background: linear-gradient(135deg, #251040, #111126);
   border-radius: 16px;
   padding: 16px;
 }
-.now-playing { color: #aaa; font-size: 0.75rem; margin-bottom: 4px; }
-.current-title { font-size: 1rem; font-weight: bold; }
-.current-artist { font-size: 0.85rem; color: #888; margin-top: 3px; }
-audio { width: 100%; margin-top: 10px; }
-.player-controls { display: flex; gap: 8px; margin-top: 12px; }
-.control-btn { flex: 1; height: 40px; border-radius: 9px; background: #29293a; color: white; border: none; cursor: pointer; font-size: 0.9rem; }
-.play-btn { background: linear-gradient(135deg, #ff2bd6, #744cff); }
-.volume { margin-top: 10px; }
-.volume input { width: 100%; }
+.now-playing {
+  color: #aaa;
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+}
+.current-title {
+  font-size: 1rem;
+  font-weight: bold;
+}
+.current-artist {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 3px;
+}
+audio {
+  width: 100%;
+  margin-top: 10px;
+}
+.player-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.control-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 9px;
+  background: #29293a;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.play-btn {
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+}
+.volume {
+  margin-top: 10px;
+}
+.volume input {
+  width: 100%;
+}
 .end-service {
   width: 100%;
   margin-top: 12px;
@@ -183,7 +346,12 @@ audio { width: 100%; margin-top: 10px; }
   cursor: pointer;
   font-size: 0.95rem;
 }
-.empty { color: #777; text-align: center; padding: 25px 10px; font-size: 0.9rem; }
+.empty {
+  color: #777;
+  text-align: center;
+  padding: 25px 10px;
+  font-size: 0.9rem;
+}
 .toast {
   position: fixed;
   left: 50%;
@@ -199,7 +367,10 @@ audio { width: 100%; margin-top: 10px; }
   z-index: 9999;
   font-size: 0.9rem;
 }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 .modal {
   display: none;
   position: fixed;
@@ -210,7 +381,9 @@ audio { width: 100%; margin-top: 10px; }
   justify-content: center;
   padding: 20px;
 }
-.modal.show { display: flex; }
+.modal.show {
+  display: flex;
+}
 .modal-box {
   width: 100%;
   max-width: 600px;
@@ -222,9 +395,26 @@ audio { width: 100%; margin-top: 10px; }
   padding: 22px;
   box-shadow: 0 20px 60px rgba(0,0,0,.5);
 }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.modal-title { font-size: 1.1rem; font-weight: bold; }
-.close-btn { width: 35px; height: 35px; border-radius: 8px; background: #292938; color: white; font-size: 1.1rem; border: none; cursor: pointer; }
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+.close-btn {
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  background: #292938;
+  color: white;
+  font-size: 1.1rem;
+  border: none;
+  cursor: pointer;
+}
 .modal-input {
   width: 100%;
   height: 45px;
@@ -237,7 +427,9 @@ audio { width: 100%; margin-top: 10px; }
   margin-bottom: 12px;
   font-size: 0.95rem;
 }
-.modal-input:focus { border-color: #9b5cff; }
+.modal-input:focus {
+  border-color: #9b5cff;
+}
 .primary-btn {
   width: 100%;
   height: 45px;
@@ -260,32 +452,93 @@ audio { width: 100%; margin-top: 10px; }
   cursor: pointer;
   font-size: 0.95rem;
 }
-.customer-result { display: grid; gap: 10px; margin-top: 15px; }
-.customer-card { padding: 14px; background: #222235; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.customer-card-name { font-weight: bold; font-size: 1rem; }
-.customer-card-info { color: #888; font-size: 0.8rem; margin-top: 4px; }
-.select-customer {
-  padding: 8px 14px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #ff2bd6, #744cff);
-  color: white;
+.customer-result {
+  display: grid;
+  gap: 10px;
+  margin-top: 15px;
+}
+.customer-card {
+  padding: 14px;
+  background: #222235;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.customer-card-name {
+  font-weight: bold;
+  font-size: 1rem;
+}
+.customer-card-info {
+  color: #888;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+.customer-actions {
+  display: flex;
+  gap: 6px;
   flex-shrink: 0;
+}
+.select-customer,
+.edit-customer {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: white;
   border: none;
   cursor: pointer;
+  font-size: 0.8rem;
+}
+.select-customer {
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+}
+.edit-customer {
+  background: #39394d;
+}
+.edit-customer:hover {
+  background: #4a4a62;
+}
+.history-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 15px;
+}
+.edit-customer-area {
+  display: none;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.edit-title {
+  color: #aaa;
+  margin-bottom: 10px;
   font-size: 0.85rem;
 }
-.history-list { display: grid; gap: 10px; margin-top: 15px; }
+.edit-customer-id {
+  color: #777;
+  font-size: 0.75rem;
+  margin-bottom: 10px;
+}
 @media(max-width:900px) {
-  .content { grid-template-columns: 1fr; }
-  .queue-panel { position: static; }
-  header { padding: 0 15px; }
-  .logo { font-size: 1.1rem; }
-  .customer-info { display: none; }
+  .content {
+    grid-template-columns: 1fr;
+  }
+  .queue-panel {
+    position: static;
+  }
+  header {
+    padding: 0 15px;
+  }
+  .logo {
+    font-size: 1.1rem;
+  }
+  .customer-info {
+    display: none;
+  }
 }
 </style>
 </head>
 <body>
-
 <header>
   <div class="logo">🎤 KTV 點歌系統</div>
   <div class="customer-area">
@@ -294,7 +547,6 @@ audio { width: 100%; margin-top: 10px; }
     <button class="customer-btn" id="clearCustomerBtn" style="display:none" onclick="clearCustomer()">清除</button>
   </div>
 </header>
-
 <main>
   <div class="search-area">
     <div class="search-box">
@@ -311,26 +563,31 @@ audio { width: 100%; margin-top: 10px; }
       </select>
     </div>
   </div>
-
-  <div class="categories" id="categoryContainer">
-    <button class="category active" onclick="filterCategory('全部', this)">全部</button>
+  <div class="quick-search">
+    <div class="quick-title">🌐 快速語言搜尋</div>
+    <div class="quick-row" id="languageContainer">
+      <button class="category active" onclick="filterLanguage('全部', this)">全部</button>
+    </div>
   </div>
-
+  <div class="quick-search">
+    <div class="quick-title">🎵 快速分類搜尋</div>
+    <div class="quick-row" id="categoryContainer">
+      <button class="category active" onclick="filterCategory('全部', this)">全部</button>
+    </div>
+  </div>
   <div class="content">
     <section>
       <div class="section-title">🎵 歌曲列表</div>
       <div class="song-list" id="songList">
-        <div class="empty">請輸入歌名、歌手或歌號開始搜尋，或點選上方分類</div>
+        <div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>
       </div>
     </section>
-
     <aside class="queue-panel">
       <div class="queue-header">
         <div class="section-title">📋 待播歌曲</div>
         <div class="queue-count" id="queueCount">0 首</div>
       </div>
       <div class="queue-list" id="queueList"></div>
-
       <div class="player">
         <div class="now-playing">NOW PLAYING</div>
         <div class="current-title" id="currentTitle">尚未播放</div>
@@ -348,7 +605,6 @@ audio { width: 100%; margin-top: 10px; }
     </aside>
   </div>
 </main>
-
 <div class="modal" id="customerModal">
   <div class="modal-box">
     <div class="modal-header">
@@ -367,9 +623,17 @@ audio { width: 100%; margin-top: 10px; }
       <input class="modal-input" id="newCustomerNote" placeholder="備註（選填）">
       <button class="primary-btn" onclick="createCustomer()">建立客戶</button>
     </div>
+    <div id="editCustomerArea" class="edit-customer-area">
+      <div class="edit-title">✏️ 編輯舊客戶</div>
+      <div class="edit-customer-id" id="editCustomerId"></div>
+      <input class="modal-input" id="editCustomerName" placeholder="客戶姓名">
+      <input class="modal-input" id="editCustomerPhone" placeholder="電話（選填）">
+      <input class="modal-input" id="editCustomerNote" placeholder="備註（選填）">
+      <button class="primary-btn" onclick="updateCustomer()">💾 儲存客戶資料</button>
+      <button class="secondary-btn" onclick="cancelEditCustomer()">取消編輯</button>
+    </div>
   </div>
 </div>
-
 <div class="modal" id="historyModal">
   <div class="modal-box">
     <div class="modal-header">
@@ -382,15 +646,12 @@ audio { width: 100%; margin-top: 10px; }
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
-
 <script>
-// 請確保此處為您的 Google Apps Script 最新部署網址
-const API_URL = "https://script.google.com/macros/s/AKfycbzXnDxJlgM89lvPSQa_kMahjpAD-c7AeNttYhiaRbw_SNjyyhXmwdvlMXrd5FpNI0Re1A/exec";
-
+const API_URL = "https://script.google.com/macros/s/AKfycbyHPsOtfURB5VcL9d4Ip2UR0s4zuWgWKK4gBH6QwtvD6QTzSoLn2ouvdA-7A-utWcETXw/exec";
 let allSongs = [];
-let currentCategory = "全部"; 
+let currentLanguage = "全部";
+let currentCategory = "全部";
 let currentCustomer = null;
 let queue = JSON.parse(localStorage.getItem("ktvQueue") || "[]");
 let favorites = JSON.parse(localStorage.getItem("ktvFavorites") || "[]");
@@ -398,26 +659,34 @@ let currentSong = null;
 let searchTimer = null;
 let customerSearchTimer = null;
 let lastKeyword = "";
+let editingCustomerId = null;
 
 window.addEventListener("DOMContentLoaded", () => {
   renderQueue();
-  loadCategories(); 
+  loadLanguages();
+  loadCategories();
   document.getElementById("audioPlayer").volume = 0.8;
 
   document.getElementById("searchInput").addEventListener("input", function() {
     clearTimeout(searchTimer);
     const keyword = this.value.trim();
-    
-    if (keyword.length === 0 && currentCategory === "全部") {
-      document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋，或點選上方分類</div>`;
-      allSongs = [];
+    if (keyword.length === 0) {
       lastKeyword = "";
+      if (currentLanguage !== "全部" || currentCategory !== "全部") {
+        fetchSongs("");
+      } else {
+        document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>`;
+        allSongs = [];
+      }
       return;
     }
-
     searchTimer = setTimeout(() => {
-      lastKeyword = keyword;
-      fetchSongs(keyword);
+      if (keyword !== lastKeyword) {
+        lastKeyword = keyword;
+        fetchSongs(keyword);
+      } else {
+        renderSongList();
+      }
     }, 250);
   });
 
@@ -431,6 +700,10 @@ window.addEventListener("DOMContentLoaded", () => {
     customerSearchTimer = setTimeout(() => {
       searchCustomers(keyword);
     }, 250);
+  });
+
+  document.getElementById("volume").addEventListener("input", function() {
+    document.getElementById("audioPlayer").volume = this.value;
   });
 });
 
@@ -449,39 +722,53 @@ async function apiPost(data) {
   return response.json();
 }
 
+async function loadLanguages() {
+  try {
+    const result = await apiGet({ action: "languages" });
+    if (!result.success || !result.data) return;
+    const container = document.getElementById("languageContainer");
+    container.innerHTML = `<button class="category active" onclick="filterLanguage('全部', this)">全部</button>` +
+      result.data.map(lang => `<button class="category" onclick="filterLanguage('${escapeJs(lang)}', this)">${escapeHtml(lang)}</button>`).join("");
+  } catch (error) {
+    console.error("載入語言失敗", error);
+  }
+}
+
 async function loadCategories() {
   try {
     const result = await apiGet({ action: "categories" });
-    if (result.success && result.data) {
-      const container = document.getElementById("categoryContainer");
-      if (container) {
-        container.innerHTML = result.data.map(cat => `
-          <button class="category ${cat === currentCategory ? "active" : ""}" onclick="filterCategory('${escapeJs(cat)}', this)">${escapeHtml(cat)}</button>
-        `).join("");
-      }
-    }
+    if (!result.success || !result.data) return;
+    const container = document.getElementById("categoryContainer");
+    container.innerHTML = `<button class="category active" onclick="filterCategory('全部', this)">全部</button>` +
+      result.data.map(category => `<button class="category" onclick="filterCategory('${escapeJs(category)}', this)">${escapeHtml(category)}</button>`).join("");
   } catch (error) {
     console.error("載入分類失敗", error);
   }
 }
 
+function filterLanguage(language, button) {
+  currentLanguage = language;
+  document.getElementById("searchInput").value = "";
+  lastKeyword = "";
+  document.querySelectorAll("#languageContainer .category").forEach(btn => btn.classList.remove("active"));
+  button.classList.add("active");
+  fetchSongs("");
+}
+
+function filterCategory(category, button) {
+  currentCategory = category;
+  document.getElementById("searchInput").value = "";
+  lastKeyword = "";
+  document.querySelectorAll("#categoryContainer .category").forEach(btn => btn.classList.remove("active"));
+  button.classList.add("active");
+  fetchSongs("");
+}
+
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
-  
-  if (!keyword && currentCategory === "全部") {
-    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋，或點選上方分類</div>`;
-    allSongs = [];
-    return;
-  }
-
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
   try {
-    const result = await apiGet({ 
-      action: "songs", 
-      q: keyword, 
-      category: currentCategory 
-    });
-    
+    const result = await apiGet({ action: "songs", q: keyword, language: currentLanguage, category: currentCategory });
     if (!result.success) throw new Error(result.message);
     allSongs = result.data || [];
     renderSongList();
@@ -491,42 +778,24 @@ async function fetchSongs(keyword = "") {
   }
 }
 
-function filterCategory(category, button) {
-  currentCategory = category;
-  document.querySelectorAll(".category").forEach(btn => btn.classList.remove("active"));
-  if (button) button.classList.add("active");
-
-  const keyword = document.getElementById("searchInput").value.trim();
-  fetchSongs(keyword);
-}
-
 function renderSongList() {
   const list = document.getElementById("songList");
-  if (!allSongs || allSongs.length === 0) {
+  if (allSongs.length === 0) {
     list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
     return;
   }
-
   const keyword = document.getElementById("searchInput").value.trim();
   let displaySongs = [...allSongs];
-
-  if (keyword && typeof Fuse !== "undefined") {
-    try {
-      const fuse = new Fuse(allSongs, {
-        keys: ["title", "artist", "song_no"],
-        threshold: 0.4,
-        ignoreLocation: true
-      });
-      const fuzzyResults = fuse.search(keyword);
-      displaySongs = fuzzyResults.map(result => result.item);
-    } catch (e) {
-      console.error("Fuse search error:", e);
-    }
+  if (keyword) {
+    const fuse = new Fuse(allSongs, {
+      keys: ["title", "artist", "song_no"],
+      threshold: 0.4,
+      ignoreLocation: true
+    });
+    const fuzzyResults = fuse.search(keyword);
+    displaySongs = fuzzyResults.map(result => result.item);
   }
-
-  const sortSelect = document.getElementById("sortSelect");
-  const sortType = sortSelect ? sortSelect.value : "";
-  
+  const sortType = document.getElementById("sortSelect").value;
   if (sortType === "title_len_asc") {
     displaySongs.sort((a, b) => String(a.title || "").length - String(b.title || "").length);
   } else if (sortType === "title_len_desc") {
@@ -536,12 +805,10 @@ function renderSongList() {
   } else if (sortType === "artist_len_desc") {
     displaySongs.sort((a, b) => String(b.artist || "").length - String(a.artist || "").length);
   }
-
   if (displaySongs.length === 0) {
     list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
     return;
   }
-
   list.innerHTML = displaySongs.map(song => {
     const isFavorite = favorites.includes(String(song.song_no));
     return `
@@ -549,7 +816,7 @@ function renderSongList() {
         <div class="cover">🎤</div>
         <div class="song-info">
           <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
-          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}${song.brand ? " · " + escapeHtml(song.brand) : ""}</div>
+          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}${song.category ? " · " + escapeHtml(song.category) : ""}${song.brand ? " · " + escapeHtml(song.brand) : ""}</div>
         </div>
         <div class="song-actions">
           <button class="favorite ${isFavorite ? "active" : ""}" onclick="toggleFavorite('${escapeJs(song.song_no)}')">${isFavorite ? "♥" : "♡"}</button>
@@ -575,23 +842,19 @@ function addSong(songNo) {
 function renderQueue() {
   const list = document.getElementById("queueList");
   const count = document.getElementById("queueCount");
-  if (count) count.textContent = `${queue.length} 首`;
-
-  if (!list) return;
-
+  count.textContent = `${queue.length} 首`;
   if (queue.length === 0) {
     list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>選擇歌曲開始點歌吧 🎤</div>`;
     return;
   }
-
   list.innerHTML = queue.map((song, index) => `
     <div class="queue-item">
       <div class="queue-number">${index + 1}</div>
-      <div class="song" style="flex: 1; margin: 0; padding: 10px 12px;">
-        <div class="cover" style="width: 44px; height: 44px; font-size: 1.1rem;">🎵</div>
+      <div class="song" style="flex:1;margin:0;padding:10px 12px;">
+        <div class="cover" style="width:44px;height:44px;font-size:1.1rem;">🎵</div>
         <div class="song-info">
           <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
-          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}${song.brand ? " · " + escapeHtml(song.brand) : ""}</div>
+          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}</div>
         </div>
       </div>
       <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
@@ -638,19 +901,9 @@ function nextSong() {
   playCurrent();
 }
 
-const audioPlayerEl = document.getElementById("audioPlayer");
-if (audioPlayerEl) {
-  audioPlayerEl.addEventListener("ended", () => {
-    nextSong();
-  });
-}
-
-const volumeEl = document.getElementById("volume");
-if (volumeEl) {
-  volumeEl.addEventListener("input", function() {
-    document.getElementById("audioPlayer").volume = this.value;
-  });
-}
+document.getElementById("audioPlayer").addEventListener("ended", () => {
+  nextSong();
+});
 
 function toggleFavorite(songNo) {
   songNo = String(songNo);
@@ -674,6 +927,7 @@ function openCustomerModal() {
   document.getElementById("customerSearch").value = "";
   document.getElementById("customerResults").innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
   document.getElementById("createCustomerArea").style.display = "none";
+  cancelEditCustomer();
   setTimeout(() => {
     document.getElementById("customerSearch").focus();
   }, 100);
@@ -695,11 +949,14 @@ async function searchCustomers(keyword) {
     }
     resultBox.innerHTML = result.data.map(customer => `
       <div class="customer-card">
-        <div>
+        <div style="min-width:0">
           <div class="customer-card-name">${escapeHtml(customer.name)}</div>
-          <div class="customer-card-info">${customer.phone ? escapeHtml(customer.phone) : "未提供電話"}</div>
+          <div class="customer-card-info">${customer.phone ? escapeHtml(customer.phone) : "未提供電話"}${customer.note ? " · " + escapeHtml(customer.note) : ""}</div>
         </div>
-        <button class="select-customer" onclick="selectCustomer('${escapeJs(customer.customer_id)}', '${escapeJs(customer.name)}')">選擇</button>
+        <div class="customer-actions">
+          <button class="edit-customer" onclick="showEditCustomer('${escapeJs(customer.customer_id)}', '${escapeJs(customer.name)}', '${escapeJs(customer.phone)}', '${escapeJs(customer.note)}')">✏️ 編輯</button>
+          <button class="select-customer" onclick="selectCustomer('${escapeJs(customer.customer_id)}', '${escapeJs(customer.name)}')">選擇</button>
+        </div>
       </div>
     `).join("");
   } catch (error) {
@@ -724,14 +981,13 @@ function selectCustomer(customerId, name) {
 function updateCustomerUI() {
   const info = document.getElementById("customerInfo");
   const clearBtn = document.getElementById("clearCustomerBtn");
-  if (!info) return;
   if (!currentCustomer) {
     info.textContent = "尚未選擇客戶";
-    if (clearBtn) clearBtn.style.display = "none";
+    clearBtn.style.display = "none";
     return;
   }
   info.innerHTML = `目前客戶：<span class="customer-name">${escapeHtml(currentCustomer.name)}</span>`;
-  if (clearBtn) clearBtn.style.display = "block";
+  clearBtn.style.display = "block";
 }
 
 function clearCustomer() {
@@ -746,30 +1002,24 @@ function clearCustomer() {
 
 function showCreateCustomer() {
   const area = document.getElementById("createCustomerArea");
-  if (area) {
-    area.style.display = area.style.display === "none" ? "block" : "none";
-  }
+  area.style.display = area.style.display === "none" ? "block" : "none";
 }
 
 async function createCustomer() {
   const name = document.getElementById("newCustomerName").value.trim();
   const phone = document.getElementById("newCustomerPhone").value.trim();
   const note = document.getElementById("newCustomerNote").value.trim();
-
   if (!name) {
     showToast("請輸入客戶姓名");
     return;
   }
-
   try {
     const result = await apiPost({ action: "createCustomer", name, phone, note });
     if (!result.success) throw new Error(result.message);
-
     currentCustomer = { customer_id: result.data.customer_id, name: result.data.name };
     localStorage.setItem("currentCustomer", JSON.stringify(currentCustomer));
     updateCustomerUI();
     closeCustomerModal();
-
     document.getElementById("newCustomerName").value = "";
     document.getElementById("newCustomerPhone").value = "";
     document.getElementById("newCustomerNote").value = "";
@@ -777,6 +1027,60 @@ async function createCustomer() {
   } catch (error) {
     console.error(error);
     showToast("新增客戶失敗");
+  }
+}
+
+function showEditCustomer(customerId, name, phone, note) {
+  editingCustomerId = customerId;
+  document.getElementById("editCustomerId").textContent = `客戶代碼：${customerId}`;
+  document.getElementById("editCustomerName").value = name || "";
+  document.getElementById("editCustomerPhone").value = phone || "";
+  document.getElementById("editCustomerNote").value = note || "";
+  document.getElementById("editCustomerArea").style.display = "block";
+  document.getElementById("createCustomerArea").style.display = "none";
+  document.getElementById("editCustomerName").focus();
+}
+
+function cancelEditCustomer() {
+  editingCustomerId = null;
+  const area = document.getElementById("editCustomerArea");
+  if (area) {
+    area.style.display = "none";
+  }
+}
+
+async function updateCustomer() {
+  if (!editingCustomerId) {
+    showToast("沒有選擇要編輯的客戶");
+    return;
+  }
+  const name = document.getElementById("editCustomerName").value.trim();
+  const phone = document.getElementById("editCustomerPhone").value.trim();
+  const note = document.getElementById("editCustomerNote").value.trim();
+  if (!name) {
+    showToast("客戶姓名不能空白");
+    return;
+  }
+  if (!confirm(`確定要修改客戶「${name}」的資料嗎？`)) {
+    return;
+  }
+  try {
+    const result = await apiPost({ action: "updateCustomer", customer_id: editingCustomerId, name, phone, note });
+    if (!result.success) throw new Error(result.message);
+    if (currentCustomer && String(currentCustomer.customer_id) === String(editingCustomerId)) {
+      currentCustomer.name = name;
+      localStorage.setItem("currentCustomer", JSON.stringify(currentCustomer));
+      updateCustomerUI();
+    }
+    showToast("客戶資料更新成功");
+    const keyword = document.getElementById("customerSearch").value.trim();
+    if (keyword) {
+      await searchCustomers(keyword);
+    }
+    cancelEditCustomer();
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "客戶資料更新失敗");
   }
 }
 
@@ -789,7 +1093,6 @@ async function openHistory() {
   document.getElementById("historyCustomerName").textContent = `客戶：${currentCustomer.name}`;
   const list = document.getElementById("historyList");
   list.innerHTML = `<div class="empty">載入歷史歌單中...</div>`;
-
   try {
     const result = await apiGet({ action: "history", customer_id: currentCustomer.customer_id });
     if (!result.success) throw new Error(result.message);
@@ -802,7 +1105,7 @@ async function openHistory() {
         <div class="cover">📜</div>
         <div class="song-info">
           <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
-          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}${song.brand ? " · " + escapeHtml(song.brand) : ""}</div>
+          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}</div>
         </div>
         <div class="song-actions">
           <button class="add-btn" onclick="addHistorySong('${escapeJs(song.song_no)}', '${escapeJs(song.title)}', '${escapeJs(song.artist)}', '${escapeJs(song.brand)}', '${escapeJs(song.language)}')">＋ 點歌</button>
@@ -844,7 +1147,6 @@ async function endService() {
   }
   const ok = confirm(`確定結束「${currentCustomer.name}」本次服務？\n\n目前 ${queue.length} 首歌曲會寫入歷史歌單。`);
   if (!ok) return;
-
   try {
     const result = await apiPost({
       action: "saveHistory",
@@ -853,16 +1155,13 @@ async function endService() {
       songs: queue
     });
     if (!result.success) throw new Error(result.message);
-
     queue = [];
     currentSong = null;
     saveQueue();
     renderQueue();
-
     document.getElementById("currentTitle").textContent = "尚未播放";
     document.getElementById("currentArtist").textContent = "-";
     document.getElementById("audioPlayer").removeAttribute("src");
-
     currentCustomer = null;
     localStorage.removeItem("currentCustomer");
     updateCustomerUI();
@@ -876,7 +1175,6 @@ async function endService() {
 let toastTimer;
 function showToast(message) {
   const toast = document.getElementById("toast");
-  if (!toast) return;
   toast.textContent = message;
   toast.classList.add("show");
   clearTimeout(toastTimer);
@@ -912,6 +1210,5 @@ if (savedCustomer) {
   }
 }
 </script>
-
 </body>
 </html>
