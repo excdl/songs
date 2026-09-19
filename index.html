@@ -812,6 +812,9 @@ window.addEventListener("DOMContentLoaded", async () => {
 /*************************************************
  * 開始門禁驗證
  *************************************************/
+/*************************************************
+ * 開始門禁驗證（修正版：GPS 失敗時仍可走 IP 驗證）
+ *************************************************/
 async function startAccessVerification() {
   if (verifying) return;
   verifying = true;
@@ -823,16 +826,16 @@ async function startAccessVerification() {
   }
   if (status) {
     status.className = "auth-status";
-    status.textContent = "正在取得目前位置與網路資訊，請稍候...";
+    status.textContent = "正在取得位置與網路資訊，請稍候...";
   }
-  
+
   let latitude = null;
   let longitude = null;
 
   try {
-    // 嘗試取得 GPS，如果失敗或被拒絕，不要讓整個流程中斷，改給 null
+    // 1. 嘗試取得 GPS。如果使用者拒絕或失敗，捕捉錯誤並讓 latitude/longitude 維持 null，不中斷流程
     const position = await getCurrentPosition().catch(err => {
-      console.warn("GPS 取得失敗，將僅嘗試以 IP 驗證", err);
+      console.warn("GPS 取得失敗或未開啟，將僅依賴 IP 驗證", err);
       return null;
     });
 
@@ -844,17 +847,20 @@ async function startAccessVerification() {
       }
     } else {
       if (status) {
-        status.textContent = "未啟用 GPS，正在嘗試以公司 IP 驗證...";
+        status.textContent = "未取得 GPS，正在嘗試以公司 IP 驗證...";
       }
     }
 
+    // 2. 取得公開 IP
     const ip = await getPublicIP();
+
+    // 3. 將資料送到後端（後端會判斷只要 GPS 或 IP 其中一個合乎規定就會放行）
     const result = await verifyAccess(latitude, longitude, ip);
     
     if (!result.success || !result.accessGranted) {
-      throw new Error(result.message || "目前不在允許的工作據點");
+      throw new Error(result.message || "目前不在允許的工作據點範圍內");
     }
-    
+
     saveAccessSession(result.token, result.expiresIn, result.location);
     showMainApp();
     startVerificationTimer();
