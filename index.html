@@ -722,3068 +722,859 @@ audio {
 
 <script>
 
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbwgF_VwCF4C4_Cr_iiMkFCPbWKEm3_jM6LVZJxzCV57QXhIAPlG_dggiHVHjX-S83pa/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxW3H8ISUYz6AjCHkue1jZvQa2b3PApRtQGIRX7ZLZx__g-gdJQiGyhubhHCtPpzuHx/exec";
 
-
-/* =================================================
+/* =========================================================
  * 全域狀態
- * ================================================= */
-
+ * ========================================================= */
 let allSongs = [];
-
 let currentLanguage = "全部";
 let currentCategory = "全部";
-
 let currentCustomer = null;
-
-let queue = loadLocalStorageArray("ktvQueue");
-let favorites = loadLocalStorageArray("ktvFavorites");
-
+let queue = [];
+let favorites = [];
 let currentSong = null;
-
 let searchTimer = null;
 let customerSearchTimer = null;
-
 let lastKeyword = "";
-
 let editingCustomerId = null;
-
 let ktvInitialized = false;
+let authChecking = false;
 
-/*
- * 搜尋請求編號
- *
- * 每次開始新的搜尋就 +1。
- * 如果舊的 API 回來時 requestId 已經不同，
- * 就直接忽略舊結果。
- *
- * 這是解決「第一次搜尋查到後閃掉」的重要機制。
- */
-let songSearchRequestId = 0;
-
-
-/*
- * 客戶搜尋請求編號
- */
-let customerSearchRequestId = 0;
-
-
-/*
- * Toast 計時器
- */
-let toastTimer = null;
-
-
-/* =================================================
- * LocalStorage 工具
- * ================================================= */
-
-function loadLocalStorageArray(key) {
+/* =========================================================
+ * localStorage 安全讀取
+ * ========================================================= */
+function loadLocalStorage() {
   try {
-    const value = JSON.parse(localStorage.getItem(key) || "[]");
-
-    if (Array.isArray(value)) {
-      return value;
-    }
-
-    return [];
+    const savedQueue = localStorage.getItem("ktvQueue");
+    queue = savedQueue ? (Array.isArray(JSON.parse(savedQueue)) ? JSON.parse(savedQueue) : []) : [];
   } catch (error) {
-    console.warn(`LocalStorage 讀取失敗：${key}`, error);
-    return [];
+    console.error("讀取 ktvQueue 失敗", error);
+    queue = [];
+  }
+
+  try {
+    const savedFavorites = localStorage.getItem("ktvFavorites");
+    favorites = savedFavorites ? (Array.isArray(JSON.parse(savedFavorites)) ? JSON.parse(savedFavorites).map(String) : []) : [];
+  } catch (error) {
+    console.error("讀取 ktvFavorites 失敗", error);
+    favorites = [];
+  }
+
+  try {
+    const savedCustomer = localStorage.getItem("currentCustomer");
+    if (savedCustomer) {
+      const parsed = JSON.parse(savedCustomer);
+      if (parsed && parsed.customer_id && parsed.name) currentCustomer = parsed;
+    }
+  } catch (error) {
+    console.error("讀取 currentCustomer 失敗", error);
+    localStorage.removeItem("currentCustomer");
+    currentCustomer = null;
   }
 }
 
-
-/* =================================================
+/* =========================================================
  * 頁面載入
- * ================================================= */
-
-window.addEventListener("DOMContentLoaded", () => {
+ * ========================================================= */
+window.addEventListener("DOMContentLoaded", function () {
+  loadLocalStorage();
   checkLocationAuth();
 });
 
-
-/* =================================================
- * 據點驗證
- *
- * IP OR GPS：
- *
- * 1. 公司 Wi-Fi IP 符合 → 通過
- * 2. GPS 在公司範圍 → 通過
- * 3. 任一成立即可
- * ================================================= */
-
-function checkLocationAuth() {
+/* =========================================================
+ * 據點安全驗證 (IP OR GPS)
+ * ========================================================= */
+async function checkLocationAuth() {
+  if (authChecking) return;
+  authChecking = true;
 
   const descEl = document.getElementById("authDesc");
   const spinnerEl = document.getElementById("authSpinner");
   const errorEl = document.getElementById("authError");
   const retryBtn = document.getElementById("retryAuthBtn");
 
-  descEl.textContent = "正在取得您的 GPS 位置...";
+  descEl.textContent = "正在取得您的網路與 GPS 資訊...";
   spinnerEl.style.display = "block";
   errorEl.textContent = "";
   retryBtn.style.display = "none";
 
-
-  /*
-   * 瀏覽器不支援 GPS
-   *
-   * 注意：
-   * 後端如果能自行取得 IP，
-   * 理論上可以做純 IP 驗證。
-   *
-   * 但目前前端 API 沒有獨立 IP 查詢流程，
-   * 所以仍然需要 GPS。
-   */
-
-  if (!navigator.geolocation) {
-
-    authFailed(
-      "您的瀏覽器不支援地理定位功能，無法使用本系統。"
-    );
-
-    return;
-  }
-
-
-  navigator.geolocation.getCurrentPosition(
-
-    async (position) => {
-
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-
-      descEl.textContent =
-        "定位成功，正在驗證公司據點...";
-
-
-      try {
-
-        /*
-         * 不需要把 IP 從前端傳入。
-         *
-         * 後端可以依部署環境取得相關資訊。
-         */
-        const query = new URLSearchParams({
-          action: "verifyLocation",
-          lat: String(lat),
-          lng: String(lng)
-        });
-
-
-        const response =
-          await fetch(`${API_URL}?${query.toString()}`, {
-            method: "GET",
-            cache: "no-store"
-          });
-
-
-        if (!response.ok) {
-          throw new Error(
-            `HTTP ${response.status}`
-          );
-        }
-
-
-        const result = await response.json();
-
-
-        /*
-         * 後端只要回：
-         *
-         * rangeStatus = 有效打卡區
-         *
-         * 就允許進入。
-         *
-         * 這個狀態本身已經是：
-         *
-         * IP OR GPS
-         */
-        if (
-          result.success &&
-          result.rangeStatus === "有效打卡區"
-        ) {
-
-          const overlay =
-            document.getElementById("authOverlay");
-
-
-          overlay.style.opacity = "0";
-
-
-          setTimeout(() => {
-
-            overlay.style.display = "none";
-
-            showToast(
-              "📍 據點驗證成功，歡迎使用！"
-            );
-
-            initKtvSystem();
-
-          }, 400);
-
-
-        } else {
-
-          const company =
-            result.companyName || "未知";
-
-          const distance =
-            result.distance !== null &&
-            result.distance !== undefined
-              ? `${result.distance} 公尺`
-              : "未知";
-
-
-          authFailed(
-            `❌ 驗證未通過：您目前不在有效公司據點內。\n\n` +
-            `最近據點：${company}\n` +
-            `距離：${distance}`
-          );
-        }
-
-      } catch (error) {
-
-        console.error(
-          "據點驗證錯誤：",
-          error
-        );
-
-
-        authFailed(
-          "無法連線至後端伺服器進行驗證，" +
-          "請檢查網路狀態後重新驗證。"
-        );
+  try {
+    descEl.textContent = "正在確認目前網路 IP...";
+    let publicIp = "";
+    try {
+      const ipResponse = await fetch("https://api.ipify.org?format=json", { method: "GET", cache: "no-store" });
+      if (ipResponse.ok) {
+        const ipData = await ipResponse.json();
+        publicIp = String(ipData.ip || "").trim();
       }
-    },
-
-
-    (error) => {
-
-      let msg =
-        "無法取得 GPS 定位。";
-
-
-      if (
-        error.code ===
-        error.PERMISSION_DENIED
-      ) {
-
-        msg =
-          "您拒絕了瀏覽器定位權限，" +
-          "請於瀏覽器設定中開啟定位後重新整理。";
-
-      } else if (
-        error.code ===
-        error.POSITION_UNAVAILABLE
-      ) {
-
-        msg =
-          "無法取得目前裝置的位置資訊。";
-
-      } else if (
-        error.code ===
-        error.TIMEOUT
-      ) {
-
-        msg =
-          "GPS 定位逾時，請至收訊良好的地方重試。";
-      }
-
-
-      authFailed(msg);
-    },
-
-
-    {
-      timeout: 15000,
-      maximumAge: 0,
-      enableHighAccuracy: true
+    } catch (ipError) {
+      console.warn("取得公開 IP 失敗", ipError);
+      publicIp = "";
     }
 
-  );
+    descEl.textContent = publicIp ? "已取得網路 IP，正在取得 GPS 位置..." : "正在取得您的 GPS 位置...";
+
+    if (!navigator.geolocation) {
+      if (publicIp) {
+        await verifyByServer(0, 0, publicIp);
+      } else {
+        throw new Error("您的瀏覽器不支援地理定位，且無法取得目前網路 IP。");
+      }
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async function (position) {
+        try {
+          const lat = Number(position.coords.latitude);
+          const lng = Number(position.coords.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("取得的 GPS 座標無效。");
+          descEl.textContent = "定位成功，正在確認公司據點...";
+          await verifyByServer(lat, lng, publicIp);
+        } catch (error) {
+          console.error(error);
+          authFailed(error.message || "據點驗證失敗。");
+        }
+      },
+      async function (error) {
+        console.warn("GPS 取得失敗", error);
+        if (publicIp) {
+          descEl.textContent = "GPS 無法取得，正在改用公司網路 IP 驗證...";
+          try {
+            await verifyByServer(0, 0, publicIp);
+          } catch (serverError) {
+            authFailed("GPS 無法取得，而且公司網路 IP 驗證也未通過。");
+          }
+          return;
+        }
+
+        let message = "無法取得 GPS 定位。";
+        if (error.code === error.PERMISSION_DENIED) {
+          message = "您拒絕了瀏覽器定位權限。\n\n如果目前使用公司 Wi-Fi，仍可嘗試重新驗證。\n請確認瀏覽器允許此網站存取定位。";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          message = "目前無法取得裝置位置資訊。\n\n請確認 GPS / 定位服務已開啟。";
+        } else if (error.code === error.TIMEOUT) {
+          message = "GPS 定位逾時。\n\n請確認裝置定位服務正常後重新驗證。";
+        }
+        authFailed(message);
+      },
+      { timeout: 15000, maximumAge: 0, enableHighAccuracy: true }
+    );
+  } catch (error) {
+    console.error("驗證錯誤", error);
+    authFailed(error.message || "無法完成據點驗證。");
+  } finally {
+    authChecking = false;
+  }
 }
 
+/* =========================================================
+ * 將 IP + GPS 一起送給後端
+ * ========================================================= */
+async function verifyByServer(lat, lng, ip) {
+  const descEl = document.getElementById("authDesc");
+  descEl.textContent = "正在比對公司據點 IP / GPS...";
 
-/* =================================================
- * 驗證失敗
- * ================================================= */
+  const params = new URLSearchParams();
+  params.set("action", "verifyLocation");
+  params.set("lat", String(lat || 0));
+  params.set("lng", String(lng || 0));
+  params.set("ip", String(ip || "").trim());
 
-function authFailed(message) {
+  const response = await fetch(`${API_URL}?${params.toString()}`, { method: "GET", cache: "no-store" });
+  if (!response.ok) throw new Error(`伺服器錯誤：HTTP ${response.status}`);
 
-  const desc =
-    document.getElementById("authDesc");
+  const result = await response.json();
+  console.log("據點驗證結果：", result);
 
-  const spinner =
-    document.getElementById("authSpinner");
-
-  const error =
-    document.getElementById("authError");
-
-  const retry =
-    document.getElementById("retryAuthBtn");
-
-
-  desc.textContent = "存取受阻";
-
-  spinner.style.display = "none";
-
-  error.textContent = message;
-
-  retry.style.display = "block";
-}
-
-
-/* =================================================
- * KTV 初始化
- *
- * 重要：
- * 使用 ktvInitialized 防止重複綁定事件。
- * ================================================= */
-
-function initKtvSystem() {
-
-  if (ktvInitialized) {
+  if (result.success && result.rangeStatus === "有效打卡區") {
+    await authSuccess(result);
     return;
   }
 
+  let companyText = result.companyName || "未知";
+  let distanceText = result.distance !== null && result.distance !== undefined ? `${result.distance} 公尺` : "無法計算";
+  let ipText = result.ipMatched ? "IP：符合" : "IP：不符合";
+
+  authFailed(`❌ 驗證未通過\n\n最近據點：${companyText}\n距離：${distanceText}\n${ipText}`);
+}
+
+/* =========================================================
+ * 驗證成功
+ * ========================================================= */
+async function authSuccess(result) {
+  const overlay = document.getElementById("authOverlay");
+  const descEl = document.getElementById("authDesc");
+  const spinnerEl = document.getElementById("authSpinner");
+  const errorEl = document.getElementById("authError");
+  const retryBtn = document.getElementById("retryAuthBtn");
+
+  descEl.textContent = result.ipMatched ? "公司網路 IP 驗證成功！" : "GPS 據點驗證成功！";
+  spinnerEl.style.display = "none";
+  errorEl.textContent = "";
+  retryBtn.style.display = "none";
+
+  sessionStorage.setItem("ktvLocationVerified", "1");
+  overlay.style.opacity = "0";
+
+  setTimeout(function () {
+    overlay.style.display = "none";
+    showToast(result.ipMatched ? "📶 公司 Wi-Fi 驗證成功，歡迎使用！" : "📍 公司 GPS 據點驗證成功，歡迎使用！");
+    initKtvSystem();
+  }, 400);
+}
+
+/* =========================================================
+ * 驗證失敗
+ * ========================================================= */
+function authFailed(message) {
+  const descEl = document.getElementById("authDesc");
+  const spinnerEl = document.getElementById("authSpinner");
+  const errorEl = document.getElementById("authError");
+  const retryBtn = document.getElementById("retryAuthBtn");
+
+  descEl.textContent = "存取受阻";
+  spinnerEl.style.display = "none";
+  errorEl.textContent = message;
+  retryBtn.style.display = "block";
+}
+
+/* =========================================================
+ * KTV 初始化
+ * ========================================================= */
+function initKtvSystem() {
+  if (ktvInitialized) return;
   ktvInitialized = true;
 
-
-  /*
-   * 待播清單
-   */
   renderQueue();
-
-
-  /*
-   * 載入語言
-   */
+  updateCustomerUI();
   loadLanguages();
-
-
-  /*
-   * 載入分類
-   */
   loadCategories();
 
+  const audioPlayer = document.getElementById("audioPlayer");
+  if (audioPlayer) audioPlayer.volume = 0.8;
 
-  /*
-   * 音量
-   */
-  const audioPlayer =
-    document.getElementById("audioPlayer");
-
-  if (audioPlayer) {
-    audioPlayer.volume = 0.8;
-  }
-
-
-  /* ===============================================
-   * 歌曲搜尋
-   *
-   * 原本問題：
-   *
-   * input
-   * ↓
-   * debounce
-   * ↓
-   * fetchSongs()
-   * ↓
-   * fetchSongs 裡先清空畫面
-   * ↓
-   * API 回來
-   * ↓
-   * render
-   *
-   * 如果同時間又有其他搜尋，
-   * 舊 API 可能晚回來，
-   * 把新結果蓋掉。
-   *
-   * 現在使用：
-   *
-   * songSearchRequestId
-   *
-   * 舊請求一律丟棄。
-   * =============================================== */
-
-  const searchInput =
-    document.getElementById("searchInput");
-
-
+  const searchInput = document.getElementById("searchInput");
   if (searchInput) {
+    searchInput.addEventListener("input", function () {
+      clearTimeout(searchTimer);
+      const keyword = this.value.trim();
 
-    searchInput.addEventListener(
-      "input",
-      function () {
-
-        clearTimeout(searchTimer);
-
-
-        const keyword =
-          this.value.trim();
-
-
-        /*
-         * 使用者清空搜尋
-         */
-        if (!keyword) {
-
-          lastKeyword = "";
-
-          /*
-           * 如果有篩選語言／分類，
-           * 仍然載入該篩選結果。
-           */
-          if (
-            currentLanguage !== "全部" ||
-            currentCategory !== "全部"
-          ) {
-
-            fetchSongs("");
-
-          } else {
-
-            allSongs = [];
-
-            document.getElementById(
-              "songList"
-            ).innerHTML =
-              `<div class="empty">
-                請輸入歌名、歌手或歌號開始搜尋<br>
-                或直接點選上方語言／分類
-              </div>`;
-          }
-
-          return;
+      if (!keyword) {
+        lastKeyword = "";
+        if (currentLanguage !== "全部" || currentCategory !== "全部") {
+          fetchSongs("");
+        } else {
+          allSongs = [];
+          document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>`;
         }
-
-
-        /*
-         * debounce
-         *
-         * 不要每輸入一個字就呼叫 API。
-         */
-        searchTimer = setTimeout(() => {
-
-          /*
-           * 關鍵字沒有變，
-           * 只需要重新 render。
-           */
-          if (keyword === lastKeyword) {
-
-            renderSongList();
-
-            return;
-          }
-
-
-          lastKeyword = keyword;
-
-          fetchSongs(keyword);
-
-        }, 300);
-
+        return;
       }
-    );
+
+      searchTimer = setTimeout(function () {
+        lastKeyword = keyword;
+        fetchSongs(keyword);
+      }, 250);
+    });
   }
 
-
-  /* ===============================================
-   * 客戶搜尋
-   * =============================================== */
-
-  const customerSearch =
-    document.getElementById("customerSearch");
-
-
+  const customerSearch = document.getElementById("customerSearch");
   if (customerSearch) {
-
-    customerSearch.addEventListener(
-      "input",
-      function () {
-
-        clearTimeout(customerSearchTimer);
-
-
-        const keyword =
-          this.value.trim();
-
-
-        if (!keyword) {
-
-          document.getElementById(
-            "customerResults"
-          ).innerHTML =
-            `<div class="empty">
-              請輸入客戶姓名
-            </div>`;
-
-          return;
-        }
-
-
-        customerSearchTimer =
-          setTimeout(() => {
-
-            searchCustomers(keyword);
-
-          }, 300);
-
+    customerSearch.addEventListener("input", function () {
+      clearTimeout(customerSearchTimer);
+      const keyword = this.value.trim();
+      if (!keyword) {
+        document.getElementById("customerResults").innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
+        return;
       }
-    );
+      customerSearchTimer = setTimeout(function () {
+        searchCustomers(keyword);
+      }, 250);
+    });
   }
 
-
-  /* ===============================================
-   * 音量
-   * =============================================== */
-
-  const volume =
-    document.getElementById("volume");
-
-
+  const volume = document.getElementById("volume");
   if (volume) {
-
-    volume.addEventListener(
-      "input",
-      function () {
-
-        const player =
-          document.getElementById(
-            "audioPlayer"
-          );
-
-        if (player) {
-          player.volume =
-            Number(this.value);
-        }
-
-      }
-    );
+    volume.addEventListener("input", function () {
+      const player = document.getElementById("audioPlayer");
+      if (player) player.volume = Number(this.value);
+    });
   }
-
-
-  /* ===============================================
-   * Audio 播放完畢
-   * =============================================== */
 
   if (audioPlayer) {
-
-    audioPlayer.addEventListener(
-      "ended",
-      () => {
-
-        nextSong();
-
-      }
-    );
+    audioPlayer.addEventListener("ended", function () {
+      nextSong();
+    });
   }
 
-
-  /* ===============================================
-   * 讀取目前客戶
-   * =============================================== */
-
-  const savedCustomer =
-    localStorage.getItem(
-      "currentCustomer"
-    );
-
-
-  if (savedCustomer) {
-
-    try {
-
-      currentCustomer =
-        JSON.parse(savedCustomer);
-
-      updateCustomerUI();
-
-    } catch (error) {
-
-      console.warn(
-        "目前客戶資料格式錯誤",
-        error
-      );
-
-      localStorage.removeItem(
-        "currentCustomer"
-      );
-
-    }
-  }
+  updateCustomerUI();
 }
 
-
-/* =================================================
- * API GET
- * ================================================= */
-
+/* =========================================================
+ * API GET & POST
+ * ========================================================= */
 async function apiGet(params) {
-
-  const query =
-    new URLSearchParams();
-
-
-  Object.keys(params || {}).forEach(
-    key => {
-
-      const value =
-        params[key];
-
-      query.set(
-        key,
-        value === undefined ||
-        value === null
-          ? ""
-          : String(value)
-      );
-
-    }
-  );
-
-
-  const response =
-    await fetch(
-      `${API_URL}?${query.toString()}`,
-      {
-        method: "GET",
-        cache: "no-store"
-      }
-    );
-
-
-  if (!response.ok) {
-
-    throw new Error(
-      `HTTP ${response.status}`
-    );
-  }
-
-
+  const query = new URLSearchParams(params);
+  const response = await fetch(`${API_URL}?${query.toString()}`, { method: "GET", cache: "no-store" });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
-
-
-/* =================================================
- * API POST
- * ================================================= */
 
 async function apiPost(data) {
-
-  const response =
-    await fetch(
-      API_URL,
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type":
-            "text/plain;charset=utf-8"
-        },
-
-        body: JSON.stringify(data)
-      }
-    );
-
-
-  if (!response.ok) {
-
-    throw new Error(
-      `HTTP ${response.status}`
-    );
-  }
-
-
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
 
-
-/* =================================================
- * 載入語言
- * ================================================= */
-
+/* =========================================================
+ * 語言與分類載入
+ * ========================================================= */
 async function loadLanguages() {
-
   try {
+    const result = await apiGet({ action: "languages" });
+    if (!result.success || !Array.isArray(result.data)) return;
 
-    const result =
-      await apiGet({
-        action: "languages"
-      });
+    const container = document.getElementById("languageContainer");
+    if (!container) return;
 
-
-    if (
-      !result.success ||
-      !Array.isArray(result.data)
-    ) {
-      return;
-    }
-
-
-    const container =
-      document.getElementById(
-        "languageContainer"
-      );
-
-
-    if (!container) {
-      return;
-    }
-
-
-    let html =
-      `<button
-        class="category active"
-        data-language="全部"
-        onclick="filterLanguage('全部', this)">
-        全部
-      </button>`;
-
-
-    html += result.data
-      .map(language => {
-
-        return `
-          <button
-            class="category"
-            data-language="${escapeHtml(language)}"
-            onclick="filterLanguage('${escapeJs(language)}', this)">
-            ${escapeHtml(language)}
-          </button>
-        `;
-
-      })
-      .join("");
-
-
-    container.innerHTML = html;
-
+    container.innerHTML = `<button class="category active" onclick="filterLanguage('全部', this)">全部</button>` +
+      result.data.map(lang => `<button class="category" onclick="filterLanguage('${escapeJs(lang)}', this)">${escapeHtml(lang)}</button>`).join("");
   } catch (error) {
-
-    console.error(
-      "載入語言失敗",
-      error
-    );
+    console.error("載入語言失敗", error);
   }
 }
-
-
-/* =================================================
- * 載入分類
- * ================================================= */
 
 async function loadCategories() {
-
   try {
+    const result = await apiGet({ action: "categories" });
+    if (!result.success || !Array.isArray(result.data)) return;
 
-    const result =
-      await apiGet({
-        action: "categories"
-      });
+    const container = document.getElementById("categoryContainer");
+    if (!container) return;
 
-
-    if (
-      !result.success ||
-      !Array.isArray(result.data)
-    ) {
-      return;
-    }
-
-
-    const container =
-      document.getElementById(
-        "categoryContainer"
-      );
-
-
-    if (!container) {
-      return;
-    }
-
-
-    let html =
-      `<button
-        class="category active"
-        data-category="全部"
-        onclick="filterCategory('全部', this)">
-        全部
-      </button>`;
-
-
-    html += result.data
-      .map(category => {
-
-        return `
-          <button
-            class="category"
-            data-category="${escapeHtml(category)}"
-            onclick="filterCategory('${escapeJs(category)}', this)">
-            ${escapeHtml(category)}
-          </button>
-        `;
-
-      })
-      .join("");
-
-
-    container.innerHTML = html;
-
+    container.innerHTML = `<button class="category active" onclick="filterCategory('全部', this)">全部</button>` +
+      result.data.map(category => `<button class="category" onclick="filterCategory('${escapeJs(category)}', this)">${escapeHtml(category)}</button>`).join("");
   } catch (error) {
-
-    console.error(
-      "載入分類失敗",
-      error
-    );
+    console.error("載入分類失敗", error);
   }
 }
 
-
-/* =================================================
- * 語言篩選
- * ================================================= */
-
-function filterLanguage(
-  language,
-  button
-) {
-
+function filterLanguage(language, button) {
   currentLanguage = language;
-
-  document.getElementById(
-    "searchInput"
-  ).value = "";
-
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput) searchInput.value = "";
   lastKeyword = "";
 
-
-  document
-    .querySelectorAll(
-      "#languageContainer .category"
-    )
-    .forEach(btn => {
-
-      btn.classList.remove(
-        "active"
-      );
-
-    });
-
-
-  if (button) {
-    button.classList.add(
-      "active"
-    );
-  }
-
-
+  document.querySelectorAll("#languageContainer .category").forEach(btn => btn.classList.remove("active"));
+  if (button) button.classList.add("active");
   fetchSongs("");
 }
 
-
-/* =================================================
- * 分類篩選
- * ================================================= */
-
-function filterCategory(
-  category,
-  button
-) {
-
+function filterCategory(category, button) {
   currentCategory = category;
-
-  document.getElementById(
-    "searchInput"
-  ).value = "";
-
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput) searchInput.value = "";
   lastKeyword = "";
 
-
-  document
-    .querySelectorAll(
-      "#categoryContainer .category"
-    )
-    .forEach(btn => {
-
-      btn.classList.remove(
-        "active"
-      );
-
-    });
-
-
-  if (button) {
-    button.classList.add(
-      "active"
-    );
-  }
-
-
+  document.querySelectorAll("#categoryContainer .category").forEach(btn => btn.classList.remove("active"));
+  if (button) button.classList.add("active");
   fetchSongs("");
 }
 
-
-/* =================================================
+/* =========================================================
  * 歌曲搜尋
- *
- * ★ 這裡是本次修正核心
- * ================================================= */
+ * ========================================================= */
+async function fetchSongs(keyword = "") {
+  const list = document.getElementById("songList");
+  if (!list) return;
 
-async function fetchSongs(
-  keyword = ""
-) {
-
-  /*
-   * 每次搜尋都建立新的 request ID。
-   */
-  const requestId =
-    ++songSearchRequestId;
-
-
-  const list =
-    document.getElementById(
-      "songList"
-    );
-
-
-  /*
-   * 不要再直接：
-   *
-   * list.innerHTML = 搜尋中
-   *
-   * 因為這會造成：
-   *
-   * 原結果 → 空白 → 新結果
-   *
-   * 使用者就會看到閃一下。
-   *
-   * 第一次搜尋尤其明顯。
-   *
-   * 改成只有完全沒有結果時才顯示搜尋中。
-   */
-
-  if (
-    allSongs.length === 0
-  ) {
-
-    list.innerHTML =
-      `<div class="empty">
-        搜尋中...
-      </div>`;
-
-  } else {
-
-    /*
-     * 已經有資料時，
-     * 保留原本畫面。
-     *
-     * 不清空。
-     */
-  }
-
+  list.innerHTML = `<div class="empty">搜尋中...</div>`;
 
   try {
+    const result = await apiGet({ action: "songs", q: keyword, language: currentLanguage, category: currentCategory });
+    if (!result.success) throw new Error(result.message || "歌曲搜尋失敗");
 
-    const result =
-      await apiGet({
-        action: "songs",
-        q: keyword,
-        language: currentLanguage,
-        category: currentCategory
-      });
-
-
-    /*
-     * ★ 舊請求直接丟棄
-     *
-     * 例如：
-     *
-     * 搜尋「周」
-     * requestId = 1
-     *
-     * 馬上搜尋「周杰倫」
-     * requestId = 2
-     *
-     * 如果 request 1 比 request 2 晚回來，
-     * request 1 不可以再更新畫面。
-     */
-    if (
-      requestId !== songSearchRequestId
-    ) {
-
-      return;
-    }
-
-
-    if (!result.success) {
-
-      throw new Error(
-        result.message ||
-        "歌曲搜尋失敗"
-      );
-    }
-
-
-    allSongs =
-      Array.isArray(result.data)
-        ? result.data
-        : [];
-
-
-    /*
-     * 只在真正拿到最新結果後 render。
-     */
+    allSongs = Array.isArray(result.data) ? result.data : [];
     renderSongList();
-
   } catch (error) {
-
-    /*
-     * 舊請求的錯誤也不要影響目前畫面。
-     */
-    if (
-      requestId !== songSearchRequestId
-    ) {
-
-      return;
-    }
-
-
-    console.error(
-      "歌曲搜尋失敗：",
-      error
-    );
-
-
-    list.innerHTML =
-      `<div class="empty">
-        歌曲搜尋失敗<br>
-        <small>
-          ${escapeHtml(
-            error.message || ""
-          )}
-        </small>
-      </div>`;
+    console.error("歌曲搜尋失敗", error);
+    allSongs = [];
+    list.innerHTML = `<div class="empty">歌曲搜尋失敗<br><small>${escapeHtml(error.message || "")}</small></div>`;
   }
 }
 
-
-/* =================================================
- * 歌曲列表
- * ================================================= */
-
+/* =========================================================
+ * 歌曲列表渲染
+ * ========================================================= */
 function renderSongList() {
+  const list = document.getElementById("songList");
+  if (!list) return;
 
-  const list =
-    document.getElementById(
-      "songList"
-    );
-
-
-  if (!list) {
+  if (!Array.isArray(allSongs) || allSongs.length === 0) {
+    list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
     return;
   }
 
+  let displaySongs = [...allSongs];
+  const sortSelect = document.getElementById("sortSelect");
+  const sortType = sortSelect ? sortSelect.value : "default";
 
-  if (
-    !Array.isArray(allSongs) ||
-    allSongs.length === 0
-  ) {
-
-    list.innerHTML =
-      `<div class="empty">
-        找不到符合的歌曲
-      </div>`;
-
-    return;
+  if (sortType === "title_len_asc") {
+    displaySongs.sort((a, b) => String(a.title || "").length - String(b.title || "").length);
+  } else if (sortType === "title_len_desc") {
+    displaySongs.sort((a, b) => String(b.title || "").length - String(a.title || "").length);
+  } else if (sortType === "artist_len_asc") {
+    displaySongs.sort((a, b) => String(a.artist || "").length - String(b.artist || "").length);
+  } else if (sortType === "artist_len_desc") {
+    displaySongs.sort((a, b) => String(b.artist || "").length - String(a.artist || "").length);
   }
 
+  list.innerHTML = displaySongs.map(song => {
+    const songNo = String(song.song_no || "");
+    const isFavorite = favorites.includes(songNo);
 
-  const keyword =
-    document
-      .getElementById(
-        "searchInput"
-      )
-      .value
-      .trim();
-
-
-  let displaySongs =
-    [...allSongs];
-
-
-  /*
-   * Fuse.js 模糊搜尋
-   *
-   * 後端已經做過搜尋，
-   * 這裡只做前端排序／補強。
-   */
-  if (keyword) {
-
-    try {
-
-      const fuse =
-        new Fuse(
-          allSongs,
-          {
-            keys: [
-              "title",
-              "artist",
-              "song_no",
-              "brand"
-            ],
-
-            threshold: 0.4,
-
-            ignoreLocation: true,
-
-            minMatchCharLength: 1
-          }
-        );
-
-
-      const fuzzyResults =
-        fuse.search(keyword);
-
-
-      /*
-       * 如果 Fuse 找不到，
-       * 不要直接把後端結果全部清掉。
-       *
-       * 因為中文關鍵字有時候 Fuse
-       * 會判定得比較嚴格。
-       *
-       * 保留後端結果。
-       */
-      if (
-        fuzzyResults.length > 0
-      ) {
-
-        displaySongs =
-          fuzzyResults.map(
-            result =>
-              result.item
-          );
-      }
-
-    } catch (error) {
-
-      console.warn(
-        "Fuse 搜尋失敗",
-        error
-      );
-
-    }
-  }
-
-
-  /* =================================================
-   * 排序
-   * ================================================= */
-
-  const sortSelect =
-    document.getElementById(
-      "sortSelect"
-    );
-
-
-  const sortType =
-    sortSelect
-      ? sortSelect.value
-      : "default";
-
-
-  if (
-    sortType ===
-    "title_len_asc"
-  ) {
-
-    displaySongs.sort(
-      (a, b) =>
-        String(a.title || "")
-          .length -
-        String(b.title || "")
-          .length
-    );
-
-  } else if (
-    sortType ===
-    "title_len_desc"
-  ) {
-
-    displaySongs.sort(
-      (a, b) =>
-        String(b.title || "")
-          .length -
-        String(a.title || "")
-          .length
-    );
-
-  } else if (
-    sortType ===
-    "artist_len_asc"
-  ) {
-
-    displaySongs.sort(
-      (a, b) =>
-        String(a.artist || "")
-          .length -
-        String(b.artist || "")
-          .length
-    );
-
-  } else if (
-    sortType ===
-    "artist_len_desc"
-  ) {
-
-    displaySongs.sort(
-      (a, b) =>
-        String(b.artist || "")
-          .length -
-        String(a.artist || "")
-          .length
-    );
-  }
-
-
-  if (
-    displaySongs.length === 0
-  ) {
-
-    list.innerHTML =
-      `<div class="empty">
-        找不到符合的歌曲
-      </div>`;
-
-    return;
-  }
-
-
-  /*
-   * 產生歌曲 HTML
-   */
-  list.innerHTML =
-    displaySongs
-      .map(song => {
-
-        const songNo =
-          String(
-            song.song_no || ""
-          );
-
-
-        const isFavorite =
-          favorites.includes(
-            songNo
-          );
-
-
-        const categoryText =
-          song.category
-            ? ` · ${escapeHtml(
-                song.category
-              )}`
-            : "";
-
-
-        const brandText =
-          song.brand
-            ? ` · ${escapeHtml(
-                song.brand
-              )}`
-            : "";
-
-
-        return `
-          <div class="song">
-
-            <div class="cover">
-              🎤
-            </div>
-
-            <div class="song-info">
-
-              <div class="song-title">
-                [${escapeHtml(songNo)}]
-                ${escapeHtml(
-                  song.title || ""
-                )}
-              </div>
-
-              <div class="artist">
-                ${escapeHtml(
-                  song.artist || ""
-                )}
-                ·
-                ${escapeHtml(
-                  song.language ||
-                  "未分類"
-                )}
-                ${categoryText}
-                ${brandText}
-              </div>
-
-            </div>
-
-            <div class="song-actions">
-
-              <button
-                class="favorite ${
-                  isFavorite
-                    ? "active"
-                    : ""
-                }"
-                onclick="toggleFavorite('${escapeJs(songNo)}')">
-                ${
-                  isFavorite
-                    ? "♥"
-                    : "♡"
-                }
-              </button>
-
-              <button
-                class="add-btn"
-                onclick="addSong('${escapeJs(songNo)}')">
-                ＋ 點歌
-              </button>
-
-            </div>
-
+    return `
+      <div class="song">
+        <div class="cover">🎤</div>
+        <div class="song-info">
+          <div class="song-title">[${escapeHtml(songNo)}] ${escapeHtml(song.title)}</div>
+          <div class="artist">
+            ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
+            ${song.category ? " · " + escapeHtml(song.category) : ""}
+            ${song.brand ? " · " + escapeHtml(song.brand) : ""}
           </div>
-        `;
-
-      })
-      .join("");
+        </div>
+        <div class="song-actions">
+          <button class="favorite ${isFavorite ? "active" : ""}" onclick="toggleFavorite('${escapeJs(songNo)}')">${isFavorite ? "♥" : "♡"}</button>
+          <button class="add-btn" onclick="addSong('${escapeJs(songNo)}')">＋ 點歌</button>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
-
-/* =================================================
- * 新增歌曲到待播
- * ================================================= */
-
+/* =========================================================
+ * 加入歌曲與待播清單
+ * ========================================================= */
 function addSong(songNo) {
-
-  const song =
-    allSongs.find(
-      s =>
-        String(s.song_no) ===
-        String(songNo)
-    );
-
-
+  const song = allSongs.find(item => String(item.song_no) === String(songNo));
   if (!song) {
-
-    showToast(
-      "找不到歌曲"
-    );
-
+    showToast("找不到歌曲");
     return;
   }
 
-
-  queue.push({
-    ...song,
-
-    queueId:
-      Date.now() +
-      Math.random()
-  });
-
-
+  queue.push({ ...song, queueId: Date.now() + Math.random() });
   saveQueue();
-
   renderQueue();
-
-  showToast(
-    `已點歌：${song.title}`
-  );
+  showToast(`已點歌：${song.title}`);
 }
-
-
-/* =================================================
- * 待播清單
- * ================================================= */
 
 function renderQueue() {
+  const list = document.getElementById("queueList");
+  const count = document.getElementById("queueCount");
+  if (!list || !count) return;
 
-  const list =
-    document.getElementById(
-      "queueList"
-    );
+  count.textContent = `${queue.length} 首`;
 
-  const count =
-    document.getElementById(
-      "queueCount"
-    );
-
-
-  if (!list || !count) {
+  if (queue.length === 0) {
+    list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>選擇歌曲開始點歌吧 🎤</div>`;
     return;
   }
 
-
-  count.textContent =
-    `${queue.length} 首`;
-
-
-  if (
-    queue.length === 0
-  ) {
-
-    list.innerHTML =
-      `<div class="empty">
-        目前沒有待播歌曲<br>
-        選擇歌曲開始點歌吧 🎤
-      </div>`;
-
-    return;
-  }
-
-
-  list.innerHTML =
-    queue
-      .map(
-        (song, index) => {
-
-          return `
-            <div
-              class="song"
-              style="
-                display:flex;
-                align-items:center;
-                justify-content:space-between;
-              ">
-
-              <div
-                style="
-                  display:flex;
-                  align-items:center;
-                  gap:10px;
-                  flex:1;
-                  min-width:0;
-                ">
-
-                <div
-                  class="queue-number"
-                  style="
-                    font-weight:bold;
-                    min-width:24px;
-                    text-align:center;
-                  ">
-                  ${index + 1}
-                </div>
-
-                <div class="cover">
-                  🎤
-                </div>
-
-                <div
-                  class="song-info"
-                  style="
-                    min-width:0;
-                    flex:1;
-                  ">
-
-                  <div class="song-title">
-                    [${escapeHtml(
-                      song.song_no
-                    )}]
-                    ${escapeHtml(
-                      song.title
-                    )}
-                  </div>
-
-                  <div
-                    class="artist"
-                    style="
-                      overflow:hidden;
-                      text-overflow:ellipsis;
-                      white-space:nowrap;
-                    ">
-
-                    ${escapeHtml(
-                      song.artist
-                    )}
-
-                    ·
-
-                    ${escapeHtml(
-                      song.language ||
-                      "未分類"
-                    )}
-
-                    ${
-                      song.brand
-                        ? " · " +
-                          escapeHtml(
-                            song.brand
-                          )
-                        : ""
-                    }
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              <div
-                class="song-actions"
-                style="
-                  margin-left:10px;
-                ">
-
-                <button
-                  class="remove-btn"
-                  onclick="removeSong(${song.queueId})"
-                  style="
-                    padding:4px 8px;
-                  ">
-                  ×
-                </button>
-
-              </div>
-
-            </div>
-          `;
-        }
-      )
-      .join("");
+  list.innerHTML = queue.map((song, index) => `
+    <div class="song" style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <div class="queue-number" style="font-weight:bold;min-width:24px;text-align:center;">${index + 1}</div>
+        <div class="cover">🎤</div>
+        <div class="song-info" style="min-width:0;flex:1;">
+          <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
+          <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
+            ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+          </div>
+        </div>
+      </div>
+      <div class="song-actions" style="margin-left:10px;">
+        <button class="remove-btn" onclick="removeSong(${song.queueId})" style="padding:4px 8px;">×</button>
+      </div>
+    </div>
+  `).join("");
 }
-
-
-/* =================================================
- * 移除歌曲
- * ================================================= */
 
 function removeSong(queueId) {
-
-  queue =
-    queue.filter(
-      song =>
-        song.queueId !==
-        queueId
-    );
-
-
+  queue = queue.filter(song => song.queueId !== queueId);
   saveQueue();
-
   renderQueue();
-
-  showToast(
-    "已移除歌曲"
-  );
+  showToast("已移除歌曲");
 }
 
-
-/* =================================================
- * 播放目前歌曲
- * ================================================= */
-
+/* =========================================================
+ * 播放控制
+ * ========================================================= */
 function playCurrent() {
-
   if (!currentSong) {
-
-    if (
-      queue.length === 0
-    ) {
-
-      showToast(
-        "目前沒有待播歌曲"
-      );
-
+    if (queue.length === 0) {
+      showToast("目前沒有待播歌曲");
       return;
     }
-
-
-    currentSong =
-      queue[0];
+    currentSong = queue[0];
   }
 
+  const player = document.getElementById("audioPlayer");
+  if (!player) return;
 
-  const player =
-    document.getElementById(
-      "audioPlayer"
-    );
-
-
-  if (!player) {
-    return;
-  }
-
-
-  const media =
-    currentSong.media ||
-    `music/${encodeURIComponent(
-      currentSong.title
-    )}.mp3`;
-
-
+  const media = currentSong.media || `music/${encodeURIComponent(currentSong.title)}.mp3`;
   player.src = media;
+  document.getElementById("currentTitle").textContent = `[${currentSong.song_no}] ${currentSong.title}`;
+  document.getElementById("currentArtist").textContent = currentSong.artist || "-";
 
-
-  document.getElementById(
-    "currentTitle"
-  ).textContent =
-    `[${currentSong.song_no}] ${currentSong.title}`;
-
-
-  document.getElementById(
-    "currentArtist"
-  ).textContent =
-    currentSong.artist ||
-    "-";
-
-
-  player
-    .play()
-    .catch(error => {
-
-      console.warn(
-        "音樂播放失敗",
-        error
-      );
-
-      showToast(
-        "找不到音樂檔案或瀏覽器阻擋自動播放"
-      );
-    });
+  player.play().catch(error => {
+    console.error("播放失敗", error);
+    showToast("找不到音樂檔案或瀏覽器禁止播放");
+  });
 }
 
-
-/* =================================================
- * 下一首
- * ================================================= */
-
 function nextSong() {
-
-  if (
-    queue.length === 0
-  ) {
-
+  if (queue.length === 0) {
     currentSong = null;
-
-
-    document.getElementById(
-      "currentTitle"
-    ).textContent =
-      "尚未播放";
-
-
-    document.getElementById(
-      "currentArtist"
-    ).textContent =
-      "-";
-
-
-    const player =
-      document.getElementById(
-        "audioPlayer"
-      );
-
-
-    player.removeAttribute(
-      "src"
-    );
-
-
-    player.load();
-
-
-    showToast(
-      "沒有下一首歌曲"
-    );
-
+    document.getElementById("currentTitle").textContent = "尚未播放";
+    document.getElementById("currentArtist").textContent = "-";
+    const player = document.getElementById("audioPlayer");
+    if (player) {
+      player.pause();
+      player.removeAttribute("src");
+      player.load();
+    }
+    showToast("沒有下一首歌曲");
     return;
   }
 
-
-  currentSong =
-    queue.shift();
-
-
+  currentSong = queue.shift();
   saveQueue();
-
   renderQueue();
-
   playCurrent();
 }
 
-
-/* =================================================
- * 收藏
- * ================================================= */
-
-function toggleFavorite(
-  songNo
-) {
-
-  songNo =
-    String(songNo);
-
-
-  if (
-    favorites.includes(
-      songNo
-    )
-  ) {
-
-    favorites =
-      favorites.filter(
-        item =>
-          item !== songNo
-      );
-
-
-    showToast(
-      "已取消收藏"
-    );
-
+/* =========================================================
+ * 收藏與儲存
+ * ========================================================= */
+function toggleFavorite(songNo) {
+  songNo = String(songNo);
+  if (favorites.includes(songNo)) {
+    favorites = favorites.filter(item => item !== songNo);
+    showToast("已取消收藏");
   } else {
-
-    favorites.push(
-      songNo
-    );
-
-
-    showToast(
-      "已加入收藏"
-    );
+    favorites.push(songNo);
+    showToast("已加入收藏");
   }
 
-
-  localStorage.setItem(
-    "ktvFavorites",
-    JSON.stringify(
-      favorites
-    )
-  );
-
-
+  localStorage.setItem("ktvFavorites", JSON.stringify(favorites));
   renderSongList();
 }
 
-
-/* =================================================
- * 儲存待播清單
- * ================================================= */
-
 function saveQueue() {
-
   try {
-
-    localStorage.setItem(
-      "ktvQueue",
-      JSON.stringify(queue)
-    );
-
+    localStorage.setItem("ktvQueue", JSON.stringify(queue));
   } catch (error) {
-
-    console.error(
-      "待播清單儲存失敗",
-      error
-    );
+    console.error("儲存 queue 失敗", error);
   }
 }
 
-
-/* =================================================
- * 客戶 Modal
- * ================================================= */
-
+/* =========================================================
+ * 客戶 Modal 與管理
+ * ========================================================= */
 function openCustomerModal() {
-
-  document
-    .getElementById(
-      "customerModal"
-    )
-    .classList.add("show");
-
-
-  document.getElementById(
-    "customerSearch"
-  ).value = "";
-
-
-  document.getElementById(
-    "customerResults"
-  ).innerHTML =
-    `<div class="empty">
-      請輸入客戶姓名
-    </div>`;
-
-
-  document.getElementById(
-    "createCustomerArea"
-  ).style.display =
-    "none";
-
-
+  document.getElementById("customerModal").classList.add("show");
+  document.getElementById("customerSearch").value = "";
+  document.getElementById("customerResults").innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
+  document.getElementById("createCustomerArea").style.display = "none";
   cancelEditCustomer();
 
-
-  setTimeout(() => {
-
-    document.getElementById(
-      "customerSearch"
-    ).focus();
-
-  }, 100);
+  setTimeout(() => document.getElementById("customerSearch").focus(), 100);
 }
-
-
-/* =================================================
- * 關閉客戶 Modal
- * ================================================= */
 
 function closeCustomerModal() {
-
-  document
-    .getElementById(
-      "customerModal"
-    )
-    .classList.remove(
-      "show"
-    );
+  document.getElementById("customerModal").classList.remove("show");
 }
 
+async function searchCustomers(keyword) {
+  const resultBox = document.getElementById("customerResults");
+  if (!resultBox) return;
 
-/* =================================================
- * 搜尋客戶
- * ================================================= */
-
-async function searchCustomers(
-  keyword
-) {
-
-  const requestId =
-    ++customerSearchRequestId;
-
-
-  const resultBox =
-    document.getElementById(
-      "customerResults"
-    );
-
-
-  resultBox.innerHTML =
-    `<div class="empty">
-      搜尋中...
-    </div>`;
-
+  resultBox.innerHTML = `<div class="empty">搜尋中...</div>`;
 
   try {
+    const result = await apiGet({ action: "customers", q: keyword });
+    if (!result.success) throw new Error(result.message);
 
-    const result =
-      await apiGet({
-        action: "customers",
-        q: keyword
-      });
-
-
-    /*
-     * 舊客戶搜尋結果不更新畫面。
-     */
-    if (
-      requestId !==
-      customerSearchRequestId
-    ) {
-
+    if (!result.data || result.data.length === 0) {
+      resultBox.innerHTML = `<div class="empty">找不到「${escapeHtml(keyword)}」<br><br>可以按下方「新增客戶」</div>`;
       return;
     }
 
-
-    if (
-      !result.success
-    ) {
-
-      throw new Error(
-        result.message ||
-        "搜尋失敗"
-      );
-    }
-
-
-    if (
-      !result.data ||
-      result.data.length === 0
-    ) {
-
-      resultBox.innerHTML =
-        `<div class="empty">
-          找不到「${escapeHtml(
-            keyword
-          )}」
-          <br><br>
-          可以按下方「新增客戶」
-        </div>`;
-
-      return;
-    }
-
-
-    resultBox.innerHTML =
-      result.data
-        .map(
-          customer => {
-
-            return `
-              <div class="customer-card">
-
-                <div
-                  style="
-                    min-width:0
-                  ">
-
-                  <div
-                    class="customer-card-name">
-                    ${escapeHtml(
-                      customer.name
-                    )}
-                  </div>
-
-                  <div
-                    class="customer-card-info">
-
-                    ${
-                      customer.phone
-                        ? escapeHtml(
-                            customer.phone
-                          )
-                        : "未提供電話"
-                    }
-
-                    ${
-                      customer.note
-                        ? " · " +
-                          escapeHtml(
-                            customer.note
-                          )
-                        : ""
-                    }
-
-                  </div>
-
-                </div>
-
-                <div
-                  class="customer-actions">
-
-                  <button
-                    class="edit-customer"
-                    onclick="showEditCustomer(
-                      '${escapeJs(
-                        customer.customer_id
-                      )}',
-                      '${escapeJs(
-                        customer.name
-                      )}',
-                      '${escapeJs(
-                        customer.phone
-                      )}',
-                      '${escapeJs(
-                        customer.note
-                      )}'
-                    )">
-
-                    ✏️ 編輯
-
-                  </button>
-
-                  <button
-                    class="select-customer"
-                    onclick="selectCustomer(
-                      '${escapeJs(
-                        customer.customer_id
-                      )}',
-                      '${escapeJs(
-                        customer.name
-                      )}'
-                    )">
-
-                    選擇
-
-                  </button>
-
-                </div>
-
-              </div>
-            `;
-          }
-        )
-        .join("");
-
-
+    resultBox.innerHTML = result.data.map(customer => `
+      <div class="customer-card">
+        <div style="min-width:0">
+          <div class="customer-card-name">${escapeHtml(customer.name)}</div>
+          <div class="customer-card-info">${customer.phone ? escapeHtml(customer.phone) : "未提供電話"} ${customer.note ? " · " + escapeHtml(customer.note) : ""}</div>
+        </div>
+        <div class="customer-actions">
+          <button class="edit-customer" onclick="showEditCustomer('${escapeJs(customer.customer_id)}', '${escapeJs(customer.name)}', '${escapeJs(customer.phone)}', '${escapeJs(customer.note)}')">✏️ 編輯</button>
+          <button class="select-customer" onclick="selectCustomer('${escapeJs(customer.customer_id)}', '${escapeJs(customer.name)}')">選擇</button>
+        </div>
+      </div>
+    `).join("");
   } catch (error) {
-
-    if (
-      requestId !==
-      customerSearchRequestId
-    ) {
-
-      return;
-    }
-
-
-    console.error(
-      "客戶搜尋失敗",
-      error
-    );
-
-
-    resultBox.innerHTML =
-      `<div class="empty">
-        客戶搜尋失敗
-      </div>`;
+    console.error(error);
+    resultBox.innerHTML = `<div class="empty">客戶搜尋失敗</div>`;
   }
 }
 
-
-/* =================================================
- * 選擇客戶
- * ================================================= */
-
-function selectCustomer(
-  customerId,
-  name
-) {
-
-  currentCustomer = {
-    customer_id:
-      customerId,
-    name:
-      name
-  };
-
-
-  localStorage.setItem(
-    "currentCustomer",
-    JSON.stringify(
-      currentCustomer
-    )
-  );
-
-
+function selectCustomer(customerId, name) {
+  currentCustomer = { customer_id: customerId, name: name };
+  localStorage.setItem("currentCustomer", JSON.stringify(currentCustomer));
   updateCustomerUI();
-
   closeCustomerModal();
-
-
-  showToast(
-    `目前客戶：${name}`
-  );
-
+  showToast(`目前客戶：${name}`);
 
   setTimeout(() => {
-
-    if (
-      confirm(
-        `是否載入「${name}」的歷史歌單？`
-      )
-    ) {
-
-      openHistory();
-    }
-
+    if (confirm(`是否載入「${name}」的歷史歌單？`)) openHistory();
   }, 200);
 }
 
-
-/* =================================================
- * 客戶 UI
- * ================================================= */
-
 function updateCustomerUI() {
+  const info = document.getElementById("customerInfo");
+  const clearBtn = document.getElementById("clearCustomerBtn");
+  if (!info || !clearBtn) return;
 
-  const info =
-    document.getElementById(
-      "customerInfo"
-    );
-
-  const clearBtn =
-    document.getElementById(
-      "clearCustomerBtn"
-    );
-
-
-  if (
-    !currentCustomer
-  ) {
-
-    info.textContent =
-      "尚未選擇客戶";
-
-    clearBtn.style.display =
-      "none";
-
+  if (!currentCustomer) {
+    info.textContent = "尚未選擇客戶";
+    clearBtn.style.display = "none";
     return;
   }
 
-
-  info.innerHTML =
-    `目前客戶：
-      <span class="customer-name">
-        ${escapeHtml(
-          currentCustomer.name
-        )}
-      </span>`;
-
-
-  clearBtn.style.display =
-    "block";
+  info.innerHTML = `目前客戶：<span class="customer-name">${escapeHtml(currentCustomer.name)}</span>`;
+  clearBtn.style.display = "block";
 }
-
-
-/* =================================================
- * 清除客戶
- * ================================================= */
 
 function clearCustomer() {
-
-  if (
-    queue.length > 0
-  ) {
-
-    if (
-      !confirm(
-        "目前還有待播歌曲，確定要清除客戶嗎？"
-      )
-    ) {
-
-      return;
-    }
-  }
-
+  if (queue.length > 0 && !confirm("目前還有待播歌曲，確定要清除客戶嗎？")) return;
 
   currentCustomer = null;
-
-
-  localStorage.removeItem(
-    "currentCustomer"
-  );
-
-
+  localStorage.removeItem("currentCustomer");
   updateCustomerUI();
-
-
-  showToast(
-    "已清除目前客戶"
-  );
+  showToast("已清除目前客戶");
 }
-
-
-/* =================================================
- * 新增客戶區域
- * ================================================= */
 
 function showCreateCustomer() {
-
-  const area =
-    document.getElementById(
-      "createCustomerArea"
-    );
-
-
-  area.style.display =
-    area.style.display === "none"
-      ? "block"
-      : "none";
+  const area = document.getElementById("createCustomerArea");
+  if (area) area.style.display = area.style.display === "none" ? "block" : "none";
 }
-
-
-/* =================================================
- * 新增客戶
- * ================================================= */
 
 async function createCustomer() {
-
-  const name =
-    document
-      .getElementById(
-        "newCustomerName"
-      )
-      .value
-      .trim();
-
-
-  const phone =
-    document
-      .getElementById(
-        "newCustomerPhone"
-      )
-      .value
-      .trim();
-
-
-  const note =
-    document
-      .getElementById(
-        "newCustomerNote"
-      )
-      .value
-      .trim();
-
+  const name = document.getElementById("newCustomerName").value.trim();
+  const phone = document.getElementById("newCustomerPhone").value.trim();
+  const note = document.getElementById("newCustomerNote").value.trim();
 
   if (!name) {
-
-    showToast(
-      "請輸入客戶姓名"
-    );
-
+    showToast("請輸入客戶姓名");
     return;
   }
 
-
   try {
+    const result = await apiPost({ action: "createCustomer", name, phone, note });
+    if (!result.success) throw new Error(result.message);
 
-    const result =
-      await apiPost({
-        action:
-          "createCustomer",
-
-        name,
-        phone,
-        note
-      });
-
-
-    if (
-      !result.success
-    ) {
-
-      throw new Error(
-        result.message
-      );
-    }
-
-
-    currentCustomer = {
-      customer_id:
-        result.data.customer_id,
-
-      name:
-        result.data.name
-    };
-
-
-    localStorage.setItem(
-      "currentCustomer",
-      JSON.stringify(
-        currentCustomer
-      )
-    );
-
-
+    currentCustomer = { customer_id: result.data.customer_id, name: result.data.name };
+    localStorage.setItem("currentCustomer", JSON.stringify(currentCustomer));
     updateCustomerUI();
-
     closeCustomerModal();
 
-
-    document.getElementById(
-      "newCustomerName"
-    ).value = "";
-
-
-    document.getElementById(
-      "newCustomerPhone"
-    ).value = "";
-
-
-    document.getElementById(
-      "newCustomerNote"
-    ).value = "";
-
-
-    showToast(
-      `客戶建立成功：${name}`
-    );
-
-
+    document.getElementById("newCustomerName").value = "";
+    document.getElementById("newCustomerPhone").value = "";
+    document.getElementById("newCustomerNote").value = "";
+    showToast(`客戶建立成功：${name}`);
   } catch (error) {
-
-    console.error(
-      "新增客戶失敗",
-      error
-    );
-
-
-    showToast(
-      error.message ||
-      "新增客戶失敗"
-    );
+    console.error(error);
+    showToast(error.message || "新增客戶失敗");
   }
 }
 
-
-/* =================================================
- * 編輯客戶
- * ================================================= */
-
-function showEditCustomer(
-  customerId,
-  name,
-  phone,
-  note
-) {
-
-  editingCustomerId =
-    customerId;
-
-
-  document.getElementById(
-    "editCustomerId"
-  ).textContent =
-    `客戶代碼：${customerId}`;
-
-
-  document.getElementById(
-    "editCustomerName"
-  ).value =
-    name || "";
-
-
-  document.getElementById(
-    "editCustomerPhone"
-  ).value =
-    phone || "";
-
-
-  document.getElementById(
-    "editCustomerNote"
-  ).value =
-    note || "";
-
-
-  document.getElementById(
-    "editCustomerArea"
-  ).style.display =
-    "block";
-
-
-  document.getElementById(
-    "createCustomerArea"
-  ).style.display =
-    "none";
-
-
-  document.getElementById(
-    "editCustomerName"
-  ).focus();
+function showEditCustomer(customerId, name, phone, note) {
+  editingCustomerId = customerId;
+  document.getElementById("editCustomerId").textContent = `客戶代碼：${customerId}`;
+  document.getElementById("editCustomerName").value = name || "";
+  document.getElementById("editCustomerPhone").value = phone || "";
+  document.getElementById("editCustomerNote").value = note || "";
+  document.getElementById("editCustomerArea").style.display = "block";
+  document.getElementById("createCustomerArea").style.display = "none";
+  document.getElementById("editCustomerName").focus();
 }
-
-
-/* =================================================
- * 取消編輯
- * ================================================= */
 
 function cancelEditCustomer() {
-
-  editingCustomerId =
-    null;
-
-
-  const area =
-    document.getElementById(
-      "editCustomerArea"
-    );
-
-
-  if (area) {
-
-    area.style.display =
-      "none";
-  }
+  editingCustomerId = null;
+  const area = document.getElementById("editCustomerArea");
+  if (area) area.style.display = "none";
 }
 
-
-/* =================================================
- * 更新客戶
- * ================================================= */
-
 async function updateCustomer() {
-
-  if (
-    !editingCustomerId
-  ) {
-
-    showToast(
-      "沒有選擇要編輯的客戶"
-    );
-
+  if (!editingCustomerId) {
+    showToast("沒有選擇要編輯的客戶");
     return;
   }
 
-
-  const name =
-    document
-      .getElementById(
-        "editCustomerName"
-      )
-      .value
-      .trim();
-
-
-  const phone =
-    document
-      .getElementById(
-        "editCustomerPhone"
-      )
-      .value
-      .trim();
-
-
-  const note =
-    document
-      .getElementById(
-        "editCustomerNote"
-      )
-      .value
-      .trim();
-
+  const name = document.getElementById("editCustomerName").value.trim();
+  const phone = document.getElementById("editCustomerPhone").value.trim();
+  const note = document.getElementById("editCustomerNote").value.trim();
 
   if (!name) {
-
-    showToast(
-      "客戶姓名不能空白"
-    );
-
+    showToast("客戶姓名不能空白");
     return;
   }
 
-
-  if (
-    !confirm(
-      `確定要修改客戶「${name}」的資料嗎？`
-    )
-  ) {
-
-    return;
-  }
-
+  if (!confirm(`確定要修改客戶「${name}」的資料嗎？`)) return;
 
   try {
+    const result = await apiPost({ action: "updateCustomer", customer_id: editingCustomerId, name, phone, note });
+    if (!result.success) throw new Error(result.message);
 
-    const result =
-      await apiPost({
-        action:
-          "updateCustomer",
-
-        customer_id:
-          editingCustomerId,
-
-        name,
-        phone,
-        note
-      });
-
-
-    if (
-      !result.success
-    ) {
-
-      throw new Error(
-        result.message
-      );
-    }
-
-
-    if (
-      currentCustomer &&
-      String(
-        currentCustomer.customer_id
-      ) ===
-      String(
-        editingCustomerId
-      )
-    ) {
-
-      currentCustomer.name =
-        name;
-
-
-      localStorage.setItem(
-        "currentCustomer",
-        JSON.stringify(
-          currentCustomer
-        )
-      );
-
-
+    if (currentCustomer && String(currentCustomer.customer_id) === String(editingCustomerId)) {
+      currentCustomer.name = name;
+      localStorage.setItem("currentCustomer", JSON.stringify(currentCustomer));
       updateCustomerUI();
     }
 
-
-    showToast(
-      "客戶資料更新成功"
-    );
-
-
-    const keyword =
-      document
-        .getElementById(
-          "customerSearch"
-        )
-        .value
-        .trim();
-
-
-    if (keyword) {
-
-      await searchCustomers(
-        keyword
-      );
-    }
-
-
+    showToast("客戶資料更新成功");
+    const keyword = document.getElementById("customerSearch").value.trim();
+    if (keyword) await searchCustomers(keyword);
     cancelEditCustomer();
-
-
   } catch (error) {
-
-    console.error(
-      "更新客戶失敗",
-      error
-    );
-
-
-    showToast(
-      error.message ||
-      "客戶資料更新失敗"
-    );
+    console.error(error);
+    showToast(error.message || "客戶資料更新失敗");
   }
 }
 
-
-/* =================================================
- * 開啟歷史歌單
- * ================================================= */
-
+/* =========================================================
+ * 歷史歌單
+ * ========================================================= */
 async function openHistory() {
-
-  if (
-    !currentCustomer
-  ) {
-
-    showToast(
-      "請先選擇客戶"
-    );
-
+  if (!currentCustomer) {
+    showToast("請先選擇客戶");
     return;
   }
 
-
-  document
-    .getElementById(
-      "historyModal"
-    )
-    .classList.add("show");
-
-
-  document.getElementById(
-    "historyCustomerName"
-  ).textContent =
-    `客戶：${currentCustomer.name}`;
-
-
-  const list =
-    document.getElementById(
-      "historyList"
-    );
-
-
-  list.innerHTML =
-    `<div class="empty">
-      載入歷史歌單中...
-    </div>`;
-
+  document.getElementById("historyModal").classList.add("show");
+  document.getElementById("historyCustomerName").textContent = `客戶：${currentCustomer.name}`;
+  const list = document.getElementById("historyList");
+  list.innerHTML = `<div class="empty">載入歷史歌單中...</div>`;
 
   try {
+    const result = await apiGet({ action: "history", customer_id: currentCustomer.customer_id });
+    if (!result.success) throw new Error(result.message);
 
-    const result =
-      await apiGet({
-        action:
-          "history",
-
-        customer_id:
-          currentCustomer.customer_id
-      });
-
-
-    if (
-      !result.success
-    ) {
-
-      throw new Error(
-        result.message
-      );
-    }
-
-
-    if (
-      !result.data ||
-      result.data.length === 0
-    ) {
-
-      list.innerHTML =
-        `<div class="empty">
-          此客戶目前沒有歷史歌單
-        </div>`;
-
+    if (!result.data || result.data.length === 0) {
+      list.innerHTML = `<div class="empty">此客戶目前沒有歷史歌單</div>`;
       return;
     }
 
-
-    list.innerHTML =
-      result.data
-        .map(
-          song => {
-
-            return `
-              <div
-                class="song"
-                style="
-                  display:flex;
-                  align-items:center;
-                  justify-content:space-between;
-                  margin:0 0 10px 0;
-                ">
-
-                <div
-                  style="
-                    display:flex;
-                    align-items:center;
-                    gap:10px;
-                    flex:1;
-                    min-width:0;
-                  ">
-
-                  <div class="cover">
-                    📜
-                  </div>
-
-                  <div
-                    class="song-info"
-                    style="
-                      min-width:0;
-                      flex:1;
-                    ">
-
-                    <div class="song-title">
-                      [${escapeHtml(
-                        song.song_no
-                      )}]
-                      ${escapeHtml(
-                        song.title
-                      )}
-                    </div>
-
-                    <div
-                      class="artist"
-                      style="
-                        overflow:hidden;
-                        text-overflow:ellipsis;
-                        white-space:nowrap;
-                      ">
-
-                      ${escapeHtml(
-                        song.artist
-                      )}
-
-                      ·
-
-                      ${escapeHtml(
-                        song.language ||
-                        "未分類"
-                      )}
-
-                      ${
-                        song.brand
-                          ? " · " +
-                            escapeHtml(
-                              song.brand
-                            )
-                          : ""
-                      }
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-                <div
-                  class="song-actions"
-                  style="
-                    margin-left:10px;
-                  ">
-
-                  <button
-                    class="add-btn"
-                    onclick="addHistorySong(
-                      '${escapeJs(
-                        song.song_no
-                      )}',
-                      '${escapeJs(
-                        song.title
-                      )}',
-                      '${escapeJs(
-                        song.artist
-                      )}',
-                      '${escapeJs(
-                        song.brand
-                      )}',
-                      '${escapeJs(
-                        song.language
-                      )}'
-                    )">
-
-                    ＋ 點歌
-
-                  </button>
-
-                </div>
-
-              </div>
-            `;
-          }
-        )
-        .join("");
-
-
+    list.innerHTML = result.data.map(song => `
+      <div class="song" style="display:flex;align-items:center;justify-content:space-between;margin:0 0 10px 0;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <div class="cover">📜</div>
+          <div class="song-info" style="min-width:0;flex:1;">
+            <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
+            <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
+              ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+            </div>
+          </div>
+        </div>
+        <div class="song-actions" style="margin-left:10px;">
+          <button class="add-btn" onclick="addHistorySong('${escapeJs(song.song_no)}', '${escapeJs(song.title)}', '${escapeJs(song.artist)}', '${escapeJs(song.brand)}', '${escapeJs(song.language)}')">＋ 點歌</button>
+        </div>
+      </div>
+    `).join("");
   } catch (error) {
-
-    console.error(
-      "歷史歌單載入失敗",
-      error
-    );
-
-
-    list.innerHTML =
-      `<div class="empty">
-        歷史歌單載入失敗
-      </div>`;
+    console.error(error);
+    list.innerHTML = `<div class="empty">歷史歌單載入失敗</div>`;
   }
 }
-
-
-/* =================================================
- * 關閉歷史 Modal
- * ================================================= */
 
 function closeHistoryModal() {
-
-  document
-    .getElementById(
-      "historyModal"
-    )
-    .classList.remove(
-      "show"
-    );
+  document.getElementById("historyModal").classList.remove("show");
 }
 
-
-/* =================================================
- * 從歷史歌單加入歌曲
- * ================================================= */
-
-function addHistorySong(
-  songNo,
-  title,
-  artist,
-  brand,
-  language
-) {
-
-  queue.push({
-
-    song_no:
-      songNo,
-
-    title:
-      title,
-
-    artist:
-      artist,
-
-    brand:
-      brand,
-
-    language:
-      language,
-
-    queueId:
-      Date.now() +
-      Math.random()
-  });
-
-
+function addHistorySong(songNo, title, artist, brand, language) {
+  queue.push({ song_no: songNo, title, artist, brand, language, queueId: Date.now() + Math.random() });
   saveQueue();
-
   renderQueue();
-
-
-  showToast(
-    `已加入：${title}`
-  );
+  showToast(`已加入：${title}`);
 }
-
-
-/* =================================================
- * 結束本次服務
- * ================================================= */
 
 async function endService() {
-
-  if (
-    !currentCustomer
-  ) {
-
-    showToast(
-      "請先選擇客戶"
-    );
-
+  if (!currentCustomer) {
+    showToast("請先選擇客戶");
     return;
   }
-
-
-  if (
-    queue.length === 0
-  ) {
-
-    showToast(
-      "目前沒有點歌紀錄"
-    );
-
+  if (queue.length === 0) {
+    showToast("目前沒有點歌紀錄");
     return;
   }
-
-
-  const ok =
-    confirm(
-      `確定結束「${currentCustomer.name}」本次服務？\n\n` +
-      `目前 ${queue.length} 首歌曲會寫入歷史歌單。`
-    );
-
-
-  if (!ok) {
-    return;
-  }
-
+  if (!confirm(`確定結束「${currentCustomer.name}」本次服務？\n\n目前 ${queue.length} 首歌曲會寫入歷史歌單。`)) return;
 
   try {
-
-    const result =
-      await apiPost({
-
-        action:
-          "saveHistory",
-
-        customer_id:
-          currentCustomer.customer_id,
-
-        customer_name:
-          currentCustomer.name,
-
-        songs:
-          queue
-
-      });
-
-
-    if (
-      !result.success
-    ) {
-
-      throw new Error(
-        result.message
-      );
-    }
-
+    const result = await apiPost({ action: "saveHistory", customer_id: currentCustomer.customer_id, customer_name: currentCustomer.name, songs: queue });
+    if (!result.success) throw new Error(result.message);
 
     queue = [];
-
     currentSong = null;
-
     saveQueue();
-
     renderQueue();
 
-
-    document.getElementById(
-      "currentTitle"
-    ).textContent =
-      "尚未播放";
-
-
-    document.getElementById(
-      "currentArtist"
-    ).textContent =
-      "-";
-
-
-    const player =
-      document.getElementById(
-        "audioPlayer"
-      );
-
-
-    player.removeAttribute(
-      "src"
-    );
-
-
-    player.load();
-
+    document.getElementById("currentTitle").textContent = "尚未播放";
+    document.getElementById("currentArtist").textContent = "-";
+    const player = document.getElementById("audioPlayer");
+    if (player) {
+      player.pause();
+      player.removeAttribute("src");
+      player.load();
+    }
 
     currentCustomer = null;
-
-
-    localStorage.removeItem(
-      "currentCustomer"
-    );
-
-
+    localStorage.removeItem("currentCustomer");
     updateCustomerUI();
-
-
-    showToast(
-      "本次服務已完成，歷史歌單已儲存"
-    );
-
-
+    showToast("本次服務已完成，歷史歌單已儲存");
   } catch (error) {
-
-    console.error(
-      "儲存歷史歌單失敗",
-      error
-    );
-
-
-    showToast(
-      "歷史歌單儲存失敗，沒有清除資料"
-    );
+    console.error(error);
+    showToast(error.message || "歷史歌單儲存失敗，沒有清除資料");
   }
 }
 
+/* =========================================================
+ * Toast 提示與跳脫輔助
+ * ========================================================= */
+let toastTimer = null;
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
 
-/* =================================================
- * Toast
- * ================================================= */
-
-function showToast(
-  message
-) {
-
-  const toast =
-    document.getElementById(
-      "toast"
-    );
-
-
-  if (!toast) {
-    return;
-  }
-
-
-  toast.textContent =
-    message;
-
-
-  toast.classList.add(
-    "show"
-  );
-
-
-  clearTimeout(
-    toastTimer
-  );
-
-
-  toastTimer =
-    setTimeout(() => {
-
-      toast.classList.remove(
-        "show"
-      );
-
-    }, 2500);
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
 }
 
-
-/* =================================================
- * HTML Escape
- * ================================================= */
-
-function escapeHtml(
-  value
-) {
-
-  return String(
-    value ?? ""
-  )
-
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-
-    .replace(
-      /</g,
-      "&lt;"
-    )
-
-    .replace(
-      />/g,
-      "&gt;"
-    )
-
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-
-    .replace(
-      /'/g,
-      "&#039;"
-    );
+function escapeHtml(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-
-/* =================================================
- * JavaScript String Escape
- * ================================================= */
-
-function escapeJs(
-  value
-) {
-
-  return String(
-    value ?? ""
-  )
-
-    .replace(
-      /\\/g,
-      "\\\\"
-    )
-
-    .replace(
-      /'/g,
-      "\\'"
-    )
-
-    .replace(
-      /\r/g,
-      "\\r"
-    )
-
-    .replace(
-      /\n/g,
-      "\\n"
-    );
+function escapeJs(value) {
+  return String(value ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\r/g, "\\r").replace(/\n/g, "\\n");
 }
 
 </script>
