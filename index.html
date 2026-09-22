@@ -742,6 +742,9 @@ window.addEventListener("DOMContentLoaded", function () {
 /* =========================================================
  * 據點安全驗證 (IP 與 GPS 同時並行加速版)
  * ========================================================= */
+/* =========================================================
+ * 據點安全驗證 (修正 IP 通過後未初始化 Ktv 的問題)
+ * ========================================================= */
 async function checkLocationAuth() {
   if (authChecking) return;
   authChecking = true;
@@ -751,66 +754,109 @@ async function checkLocationAuth() {
   const errorEl = document.getElementById("authError");
   const retryBtn = document.getElementById("retryAuthBtn");
 
-  descEl.textContent = "正在同時取得網路 IP 與 GPS 定位...";
+  descEl.textContent = "正在取得您的網路與 GPS 資訊...";
   spinnerEl.style.display = "block";
   errorEl.textContent = "";
   retryBtn.style.display = "none";
 
   try {
-    // 💡 同時發動 IP 查詢與 GPS 定位，不再互相排隊等待！
-    const ipPromise = fetch("https://api.ipify.org?format=json", { method: "GET", cache: "no-store" })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => String(data?.ip || "").trim())
-      .catch(err => {
-        console.warn("取得公開 IP 失敗", err);
-        return "";
-      });
-
-    const gpsPromise = new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        resolve({ lat: 0, lng: 0, error: "瀏覽器不支援地理定位" });
-        return;
+    descEl.textContent = "正在確認目前網路 IP...";
+    let publicIp = "";
+    try {
+      const ipResponse = await fetch("https://api.ipify.org?format=json", { method: "GET", cache: "no-store" });
+      if (ipResponse.ok) {
+        const ipData = await ipResponse.json();
+        publicIp = String(ipData.ip || "").trim();
       }
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = Number(position.coords.latitude);
-          const lng = Number(position.coords.longitude);
-          if (Number.isFinite(lat) && Number.isFinite(lng)) {
-            resolve({ lat, lng, error: null });
-          } else {
-            resolve({ lat: 0, lng: 0, error: "取得的 GPS 座標無效" });
-          }
-        },
-        (error) => {
-          let msg = "無法取得 GPS 定位";
-          if (error.code === error.PERMISSION_DENIED) msg = "拒絕定位權限";
-          else if (error.code === error.POSITION_UNAVAILABLE) msg = "定位服務無法使用";
-          else if (error.code === error.TIMEOUT) msg = "GPS 定位逾時";
-          resolve({ lat: 0, lng: 0, error: msg });
-        },
-        { timeout: 8000, maximumAge: 0, enableHighAccuracy: true } // 將逾時縮短為 8 秒，避免卡死
-      );
-    });
-
-    // 透過 Promise.all 同時等待兩者回傳
-    descEl.textContent = "正在快速比對公司據點...";
-    const [publicIp, gpsResult] = await Promise.all([ipPromise, gpsPromise]);
-
-    console.log("取得的 IP:", publicIp, "GPS 結果:", gpsResult);
-
-    if (!publicIp && gpsResult.error) {
-      throw new Error(`無法取得網路 IP，且 ${gpsResult.error}。請檢查網路或定位服務。`);
+    } catch (ipError) {
+      console.warn("取得公開 IP 失敗", ipError);
+      publicIp = "";
     }
 
-    // 將同時拿到的 IP 與 GPS 送給後端驗證
-    await verifyByServer(gpsResult.lat, gpsResult.lng, publicIp);
+    descEl.textContent = publicIp ? "已取得網路 IP，正在取得 GPS 位置..." : "正在取得您的 GPS 位置...";
 
+    if (!navigator.geolocation) {
+      if (publicIp) {
+        // 💡 確保直接用 IP 驗證時也能正確呼叫後端並進入成功流程
+        const result = await callVerifyServer(0, 0, publicIp);
+        if (result.success && result.rangeStatus === "有效打卡區") {
+          await authSuccess(result);
+          return;
+        } else {
+          throw new Error("網路 IP 驗證未通過。");
+        }
+      } else {
+        throw new Error("您的瀏覽器不支援地理定位，且無法取得目前網路 IP。");
+      }
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async function (position) {
+        try {
+          const lat = Number(position.coords.latitude);
+          const lng = Number(position.coords.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("取得的 GPS 座標無效。");
+          descEl.textContent = "定位成功，正在確認公司據點...";
+          
+          const result = await callVerifyServer(lat, lng, publicIp);
+          if (result.success && result.rangeStatus === "有效打卡區") {
+            await authSuccess(result);
+          } else {
+            let companyText = result.companyName || "未知";
+            let distanceText = result.distance !== null && result.distance !== undefined ? `${result.distance} 公尺` : "無法計算";
+            authFailed(`❌ 驗證未通過\n\n最近據點：${companyText}\n距離：${distanceText}`);
+          }
+        } catch (error) {
+          console.error(error);
+          authFailed(error.message || "據點驗證失敗。");
+        }
+      },
+      async function (error) {
+        console.warn("GPS 取得失敗", error);
+        if (publicIp) {
+          descEl.textContent = "GPS 無法取得，正在改用公司網路 IP 驗證...";
+          try {
+            const result = await callVerifyServer(0, 0, publicIp);
+            if (result.success && result.rangeStatus === "有效打卡區") {
+              await authSuccess(result);
+              return;
+            }
+          } catch (serverError) {
+            console.error(serverError);
+          }
+        }
+
+        let message = "無法取得 GPS 定位。";
+        if (error.code === error.PERMISSION_DENIED) {
+          message = "您拒絕了瀏覽器定位權限。\n\n請確認瀏覽器允許此網站存取定位。";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          message = "目前無法取得裝置位置資訊，請確認定位服務已開啟。";
+        } else if (error.code === error.TIMEOUT) {
+          message = "GPS 定位逾時，請重新驗證。";
+        }
+        authFailed(message);
+      },
+      { timeout: 15000, maximumAge: 0, enableHighAccuracy: true }
+    );
   } catch (error) {
     console.error("驗證錯誤", error);
     authFailed(error.message || "無法完成據點驗證。");
   } finally {
     authChecking = false;
   }
+}
+
+// 輔助抽離呼叫伺服器的共用函式
+async function callVerifyServer(lat, lng, ip) {
+  const params = new URLSearchParams();
+  params.set("action", "verifyLocation");
+  params.set("lat", String(lat || 0));
+  params.set("lng", String(lng || 0));
+  params.set("ip", String(ip || "").trim());
+
+  const response = await fetch(`${API_URL}?${params.toString()}`, { method: "GET", cache: "no-store" });
+  if (!response.ok) throw new Error(`伺服器錯誤：HTTP ${response.status}`);
+  return response.json();
 }
 
 /* =========================================================
