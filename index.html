@@ -735,6 +735,7 @@ let lastKeyword = "";
 let editingCustomerId = null;
 let ktvInitialized = false;
 let authChecking = false;
+let searchSeq = 0; // 👈 用於解決非同步競態條件（Race Condition）的序號
 
 /* =========================================================
  * localStorage 安全讀取
@@ -957,6 +958,7 @@ function initKtvSystem() {
       if (!keyword) {
         lastKeyword = "";
         allSongs = [];
+        searchSeq++; // 清空時同步推進序號，作廢進行中的請求
         document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
         return;
       }
@@ -1021,21 +1023,31 @@ async function apiPost(data) {
 }
 
 /* =========================================================
- * 歌曲搜尋
+ * 歌曲搜尋 (已加入防競態機制)
  * ========================================================= */
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
   if (!list) return;
 
+  // 記錄當前請求的序號
+  const localSeq = ++searchSeq;
+
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
 
   try {
     const result = await apiGet({ action: "songs", q: keyword, language: "全部", category: "全部" });
+    
+    // 如果這不是最新發出的請求，直接捨棄，不覆蓋畫面
+    if (localSeq !== searchSeq) return;
+
     if (!result.success) throw new Error(result.message || "歌曲搜尋失敗");
 
     allSongs = Array.isArray(result.data) ? result.data : [];
     renderSongList();
   } catch (error) {
+    // 過期請求產生的錯誤直接忽略
+    if (localSeq !== searchSeq) return;
+
     console.error("歌曲搜尋失敗", error);
     allSongs = [];
     list.innerHTML = `<div class="empty">歌曲搜尋失敗<br><small>${escapeHtml(error.message || "")}</small></div>`;
