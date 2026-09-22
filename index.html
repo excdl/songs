@@ -136,7 +136,7 @@ main {
   padding: 25px;
 }
 .search-area {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   display: flex;
   gap: 12px;
   align-items: center;
@@ -182,44 +182,6 @@ main {
 }
 .sort-box select:focus {
   border-color: #9b5cff;
-}
-.quick-search {
-  margin-bottom: 20px;
-  padding: 15px;
-  background: rgba(18,18,29,.75);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 15px;
-}
-.quick-title {
-  color: #aaa;
-  font-size: 0.82rem;
-  margin-bottom: 10px;
-}
-.quick-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding-bottom: 4px;
-}
-.category {
-  flex-shrink: 0;
-  padding: 8px 16px;
-  border-radius: 30px;
-  background: #171725;
-  color: #aaa;
-  border: 1px solid #2d2d3d;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: .2s;
-}
-.category:hover {
-  background: #29293d;
-  color: white;
-}
-.category.active {
-  color: white;
-  background: linear-gradient(135deg, #ff2bd6, #744cff);
-  border-color: transparent;
 }
 .content {
   display: grid;
@@ -596,9 +558,6 @@ audio {
     display: none;
   }
 }
-#categoryContainer {
-  display: none !important;
-}
 </style>
 </head>
 <body>
@@ -638,12 +597,13 @@ audio {
         <option value="artist_len_desc">歌手字數：多 ➔ 少</option>
       </select>
     </div>
- 
+  </div>
+  
   <div class="content">
     <section>
       <div class="section-title">🎵 歌曲列表</div>
       <div class="song-list" id="songList">
-        <div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>
+        <div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>
       </div>
     </section>
     <aside class="queue-panel">
@@ -714,6 +674,7 @@ audio {
 </div>
 
 <div class="toast" id="toast"></div>
+
 
 <script>
 
