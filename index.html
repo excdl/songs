@@ -941,7 +941,7 @@ function authFailed(message) {
 }
 
 /* =========================================================
- * KTV 初始化
+ * KTV 初始化 (已移除語言/分類載入)
  * ========================================================= */
 function initKtvSystem() {
   if (ktvInitialized) return;
@@ -949,8 +949,6 @@ function initKtvSystem() {
 
   renderQueue();
   updateCustomerUI();
-  loadLanguages();
-  loadCategories();
 
   const audioPlayer = document.getElementById("audioPlayer");
   if (audioPlayer) audioPlayer.volume = 0.8;
@@ -963,12 +961,8 @@ function initKtvSystem() {
 
       if (!keyword) {
         lastKeyword = "";
-        if (currentLanguage !== "全部" || currentCategory !== "全部") {
-          fetchSongs("");
-        } else {
-          allSongs = [];
-          document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>`;
-        }
+        allSongs = [];
+        document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
         return;
       }
 
@@ -1032,61 +1026,6 @@ async function apiPost(data) {
 }
 
 /* =========================================================
- * 語言與分類載入
- * ========================================================= */
-async function loadLanguages() {
-  try {
-    const result = await apiGet({ action: "languages" });
-    if (!result.success || !Array.isArray(result.data)) return;
-
-    const container = document.getElementById("languageContainer");
-    if (!container) return;
-
-    container.innerHTML = `<button class="category active" onclick="filterLanguage('全部', this)">全部</button>` +
-      result.data.map(lang => `<button class="category" onclick="filterLanguage('${escapeJs(lang)}', this)">${escapeHtml(lang)}</button>`).join("");
-  } catch (error) {
-    console.error("載入語言失敗", error);
-  }
-}
-
-async function loadCategories() {
-  try {
-    const result = await apiGet({ action: "categories" });
-    if (!result.success || !Array.isArray(result.data)) return;
-
-    const container = document.getElementById("categoryContainer");
-    if (!container) return;
-
-    container.innerHTML = `<button class="category active" onclick="filterCategory('全部', this)">全部</button>` +
-      result.data.map(category => `<button class="category" onclick="filterCategory('${escapeJs(category)}', this)">${escapeHtml(category)}</button>`).join("");
-  } catch (error) {
-    console.error("載入分類失敗", error);
-  }
-}
-
-function filterLanguage(language, button) {
-  currentLanguage = language;
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) searchInput.value = "";
-  lastKeyword = "";
-
-  document.querySelectorAll("#languageContainer .category").forEach(btn => btn.classList.remove("active"));
-  if (button) button.classList.add("active");
-  fetchSongs("");
-}
-
-function filterCategory(category, button) {
-  currentCategory = category;
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) searchInput.value = "";
-  lastKeyword = "";
-
-  document.querySelectorAll("#categoryContainer .category").forEach(btn => btn.classList.remove("active"));
-  if (button) button.classList.add("active");
-  fetchSongs("");
-}
-
-/* =========================================================
  * 歌曲搜尋
  * ========================================================= */
 async function fetchSongs(keyword = "") {
@@ -1096,7 +1035,7 @@ async function fetchSongs(keyword = "") {
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
 
   try {
-    const result = await apiGet({ action: "songs", q: keyword, language: currentLanguage, category: currentCategory });
+    const result = await apiGet({ action: "songs", q: keyword, language: "全部", category: "全部" });
     if (!result.success) throw new Error(result.message || "歌曲搜尋失敗");
 
     allSongs = Array.isArray(result.data) ? result.data : [];
