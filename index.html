@@ -2,12 +2,12 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>KTV 點歌系統 - 據點驗證與點歌</title>
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <style>
-html { font-size: 130%; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 100%; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body {
   font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
   background: radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
@@ -86,11 +86,11 @@ body {
 
 /* 系統主介面樣式 */
 header {
-  height: 80px;
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 25px;
+  padding: 0 20px;
   background: rgba(10,10,20,.92);
   border-bottom: 1px solid rgba(255,255,255,.08);
   position: sticky;
@@ -99,7 +99,7 @@ header {
   backdrop-filter: blur(12px);
 }
 .logo {
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: bold;
   background: linear-gradient(90deg, #ff2bd6, #8c5cff, #22d3ee);
   -webkit-background-clip: text;
@@ -108,11 +108,11 @@ header {
 .customer-area {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 .customer-info {
   color: #bbb;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 .customer-name {
   color: white;
@@ -125,7 +125,8 @@ header {
   border-radius: 8px;
   border: 1px solid #3a3a4d;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 .customer-btn:hover {
   background: #3b3b50;
@@ -133,30 +134,30 @@ header {
 main {
   max-width: 1400px;
   margin: auto;
-  padding: 25px;
+  padding: 15px;
 }
 .search-area {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   flex-wrap: wrap;
 }
 .search-box {
   position: relative;
   flex: 1;
-  min-width: 250px;
+  min-width: 200px;
 }
 .search-box input {
   width: 100%;
-  height: 52px;
+  height: 48px;
   border: 1px solid #38384c;
   border-radius: 12px;
-  padding: 0 20px 0 48px;
+  padding: 0 16px 0 44px;
   background: #151522;
   color: white;
   outline: none;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .search-box input:focus {
   border-color: #9b5cff;
@@ -164,100 +165,62 @@ main {
 }
 .search-icon {
   position: absolute;
-  left: 18px;
-  top: 15px;
-  font-size: 1.1rem;
+  left: 14px;
+  top: 13px;
+  font-size: 1rem;
   color: #999;
 }
 .sort-box select {
-  height: 52px;
-  padding: 0 16px;
+  height: 48px;
+  padding: 0 14px;
   border-radius: 12px;
   border: 1px solid #38384c;
   background: #151522;
   color: white;
   outline: none;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
 }
 .sort-box select:focus {
   border-color: #9b5cff;
 }
-.quick-search {
-  margin-bottom: 20px;
-  padding: 15px;
-  background: rgba(18,18,29,.75);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 15px;
-}
-.quick-title {
-  color: #aaa;
-  font-size: 0.82rem;
-  margin-bottom: 10px;
-}
-.quick-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding-bottom: 4px;
-}
-.category {
-  flex-shrink: 0;
-  padding: 8px 16px;
-  border-radius: 30px;
-  background: #171725;
-  color: #aaa;
-  border: 1px solid #2d2d3d;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: .2s;
-}
-.category:hover {
-  background: #29293d;
-  color: white;
-}
-.category.active {
-  color: white;
-  background: linear-gradient(135deg, #ff2bd6, #744cff);
-  border-color: transparent;
-}
+
 .content {
   display: grid;
-  grid-template-columns: 1fr 420px;
-  gap: 25px;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
 }
 .section-title {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: bold;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .song-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 .song {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 14px;
+  gap: 12px;
+  padding: 10px 12px;
   border: 1px solid rgba(255,255,255,.07);
   background: rgba(25,25,38,.75);
-  border-radius: 14px;
+  border-radius: 12px;
   transition: .2s;
 }
 .song:hover {
   background: #222235;
-  transform: translateY(-1px);
 }
 .cover {
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   background: linear-gradient(135deg, #ff2bd6, #653eff);
 }
 .song-info {
@@ -265,7 +228,7 @@ main {
   min-width: 0;
 }
 .song-title {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: bold;
   white-space: nowrap;
   overflow: hidden;
@@ -273,159 +236,174 @@ main {
 }
 .artist {
   color: #999;
-  font-size: 0.85rem;
-  margin-top: 4px;
+  font-size: 0.8rem;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .song-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 .favorite {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   background: #292938;
   color: #aaa;
-  font-size: 1.1rem;
+  font-size: 1rem;
   cursor: pointer;
   border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .favorite.active {
   color: #ff3e91;
 }
 .add-btn {
-  padding: 8px 14px;
-  border-radius: 9px;
+  padding: 8px 12px;
+  border-radius: 8px;
   color: white;
   background: linear-gradient(135deg, #ff2bd6, #744cff);
   font-weight: bold;
   border: none;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 .queue-panel {
   background: rgba(18,18,29,.9);
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 18px;
-  padding: 20px;
+  border-radius: 16px;
+  padding: 16px;
   height: fit-content;
   position: sticky;
-  top: 95px;
+  top: 85px;
 }
 .queue-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .queue-count {
   color: #aaa;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 .queue-list {
   display: grid;
-  gap: 10px;
-  max-height: 380px;
+  gap: 8px;
+  max-height: 320px;
   overflow-y: auto;
 }
 .queue-number {
-  width: 26px;
+  width: 24px;
   color: #8d7aff;
   font-weight: bold;
   text-align: center;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 .remove-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
   color: #888;
   background: transparent;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   border: none;
   cursor: pointer;
 }
 .player {
-  margin-top: 18px;
+  margin-top: 15px;
   background: linear-gradient(135deg, #251040, #111126);
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 14px;
+  padding: 14px;
 }
 .now-playing {
   color: #aaa;
-  font-size: 0.75rem;
-  margin-bottom: 4px;
+  font-size: 0.72rem;
+  margin-bottom: 3px;
 }
 .current-title {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .current-artist {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #888;
-  margin-top: 3px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 audio {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 8px;
+  height: 36px;
 }
 .player-controls {
   display: flex;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 .control-btn {
   flex: 1;
-  height: 40px;
-  border-radius: 9px;
+  height: 38px;
+  border-radius: 8px;
   background: #29293a;
   color: white;
   border: none;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 .play-btn {
   background: linear-gradient(135deg, #ff2bd6, #744cff);
 }
 .volume {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 .volume input {
   width: 100%;
 }
 .end-service {
   width: 100%;
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 9px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #e43b62, #9b2f80);
   color: white;
   font-weight: bold;
   border: none;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 .empty {
   color: #777;
   text-align: center;
-  padding: 25px 10px;
-  font-size: 0.9rem;
+  padding: 20px 10px;
+  font-size: 0.85rem;
 }
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 30px;
+  bottom: 25px;
   transform: translateX(-50%) translateY(20px);
   background: #242435;
   color: white;
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 30px;
   opacity: 0;
   pointer-events: none;
   transition: .3s;
   z-index: 9999;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
 }
 .toast.show {
   opacity: 1;
@@ -435,105 +413,105 @@ audio {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.7);
+  background: rgba(0,0,0,.75);
   z-index: 500;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 15px;
 }
 .modal.show {
   display: flex;
 }
 .modal-box {
   width: 100%;
-  max-width: 600px;
-  max-height: 90vh;
+  max-width: 500px;
+  max-height: 85vh;
   overflow-y: auto;
   background: #171725;
   border: 1px solid #343449;
-  border-radius: 18px;
-  padding: 22px;
+  border-radius: 16px;
+  padding: 18px;
   box-shadow: 0 20px 60px rgba(0,0,0,.5);
 }
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 .modal-title {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: bold;
 }
 .close-btn {
-  width: 35px;
-  height: 35px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   background: #292938;
   color: white;
-  font-size: 1.1rem;
+  font-size: 1rem;
   border: none;
   cursor: pointer;
 }
 .modal-input {
   width: 100%;
-  height: 45px;
-  padding: 0 14px;
-  border-radius: 9px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
   border: 1px solid #3a3a4d;
   background: #10101a;
   color: white;
   outline: none;
-  margin-bottom: 12px;
-  font-size: 0.95rem;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
 }
 .modal-input:focus {
   border-color: #9b5cff;
 }
 .primary-btn {
   width: 100%;
-  height: 45px;
-  border-radius: 9px;
+  height: 44px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #ff2bd6, #744cff);
   color: white;
   font-weight: bold;
   border: none;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 .secondary-btn {
   width: 100%;
-  height: 45px;
-  border-radius: 9px;
+  height: 44px;
+  border-radius: 8px;
   background: #292938;
   color: white;
-  margin-top: 10px;
+  margin-top: 8px;
   border: none;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 .customer-result {
   display: grid;
-  gap: 10px;
-  margin-top: 15px;
+  gap: 8px;
+  margin-top: 12px;
 }
 .customer-card {
-  padding: 14px;
+  padding: 12px;
   background: #222235;
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 .customer-card-name {
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .customer-card-info {
   color: #888;
-  font-size: 0.8rem;
-  margin-top: 4px;
+  font-size: 0.78rem;
+  margin-top: 3px;
 }
 .customer-actions {
   display: flex;
@@ -542,12 +520,12 @@ audio {
 }
 .select-customer,
 .edit-customer {
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
   color: white;
   border: none;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
 .select-customer {
   background: linear-gradient(135deg, #ff2bd6, #744cff);
@@ -555,31 +533,30 @@ audio {
 .edit-customer {
   background: #39394d;
 }
-.edit-customer:hover {
-  background: #4a4a62;
-}
 .history-list {
   display: grid;
-  gap: 10px;
-  margin-top: 15px;
+  gap: 8px;
+  margin-top: 12px;
 }
 .edit-customer-area {
   display: none;
-  margin-top: 20px;
-  padding-top: 18px;
+  margin-top: 15px;
+  padding-top: 15px;
   border-top: 1px solid rgba(255,255,255,.08);
 }
 .edit-title {
   color: #aaa;
-  margin-bottom: 10px;
-  font-size: 0.85rem;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
 }
 .edit-customer-id {
   color: #777;
-  font-size: 0.75rem;
-  margin-bottom: 10px;
+  font-size: 0.72rem;
+  margin-bottom: 8px;
 }
-@media(max-width:900px) {
+
+/* 📱 手機與平板適應性優化 (RWD) */
+@media(max-width: 950px) {
   .content {
     grid-template-columns: 1fr;
   }
@@ -587,23 +564,23 @@ audio {
     position: static;
   }
   header {
-    padding: 0 15px;
+    padding: 0 12px;
   }
   .logo {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
   .customer-info {
     display: none;
   }
-}
-#categoryContainer {
-  display: none !important;
+  main {
+    padding: 10px;
+  }
 }
 </style>
 </head>
 <body>
 
-<!-- 🔒 據點安全性驗證遮罩 -->
+<!-- 🔒 據點安全驗證遮罩 -->
 <div id="authOverlay">
   <div class="auth-card">
     <div class="auth-title">🎤 據點安全驗證</div>
@@ -618,7 +595,7 @@ audio {
   <div class="logo">🎤 KTV 點歌系統</div>
   <div class="customer-area">
     <div class="customer-info" id="customerInfo">尚未選擇客戶</div>
-    <button class="customer-btn" onclick="openCustomerModal()">👤 新增／選擇客戶</button>
+    <button class="customer-btn" onclick="openCustomerModal()">👤 選擇客戶</button>
     <button class="customer-btn" id="clearCustomerBtn" style="display:none" onclick="clearCustomer()">清除</button>
   </div>
 </header>
@@ -639,16 +616,12 @@ audio {
       </select>
     </div>
   </div>
-  <div class="quick-search">
-    <div class="quick-title">快速搜尋</div>
-    <div class="quick-row" id="languageContainer"></div>
-  </div>
   
   <div class="content">
     <section>
       <div class="section-title">🎵 歌曲列表</div>
       <div class="song-list" id="songList">
-        <div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>
+        <div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>
       </div>
     </section>
     <aside class="queue-panel">
@@ -686,8 +659,8 @@ audio {
       <div class="empty">請輸入客戶姓名</div>
     </div>
     <button class="secondary-btn" onclick="showCreateCustomer()">＋ 新增客戶</button>
-    <div id="createCustomerArea" style="display:none;margin-top:20px">
-      <div style="color:#aaa;margin-bottom:8px;font-size:0.85rem;">新增客戶</div>
+    <div id="createCustomerArea" style="display:none;margin-top:15px">
+      <div style="color:#aaa;margin-bottom:6px;font-size:0.82rem;">新增客戶</div>
       <input class="modal-input" id="newCustomerName" placeholder="客戶姓名">
       <input class="modal-input" id="newCustomerPhone" placeholder="電話（選填）">
       <input class="modal-input" id="newCustomerNote" placeholder="備註（選填）">
@@ -711,7 +684,7 @@ audio {
       <div class="modal-title">📜 歷史歌單</div>
       <button class="close-btn" onclick="closeHistoryModal()">×</button>
     </div>
-    <div id="historyCustomerName" style="color:#aaa;margin-bottom:10px;font-size:0.9rem;"></div>
+    <div id="historyCustomerName" style="color:#aaa;margin-bottom:8px;font-size:0.85rem;"></div>
     <div class="history-list" id="historyList">
       <div class="empty">載入中...</div>
     </div>
@@ -728,8 +701,6 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxW3H8ISUYz6AjCHkue1jZv
  * 全域狀態
  * ========================================================= */
 let allSongs = [];
-let currentLanguage = "全部";
-let currentCategory = "全部";
 let currentCustomer = null;
 let queue = [];
 let favorites = [];
@@ -949,8 +920,6 @@ function initKtvSystem() {
 
   renderQueue();
   updateCustomerUI();
-  loadLanguages();
-  loadCategories();
 
   const audioPlayer = document.getElementById("audioPlayer");
   if (audioPlayer) audioPlayer.volume = 0.8;
@@ -963,12 +932,8 @@ function initKtvSystem() {
 
       if (!keyword) {
         lastKeyword = "";
-        if (currentLanguage !== "全部" || currentCategory !== "全部") {
-          fetchSongs("");
-        } else {
-          allSongs = [];
-          document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>`;
-        }
+        allSongs = [];
+        document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
         return;
       }
 
@@ -1032,71 +997,22 @@ async function apiPost(data) {
 }
 
 /* =========================================================
- * 語言與分類載入
- * ========================================================= */
-async function loadLanguages() {
-  try {
-    const result = await apiGet({ action: "languages" });
-    if (!result.success || !Array.isArray(result.data)) return;
-
-    const container = document.getElementById("languageContainer");
-    if (!container) return;
-
-    container.innerHTML = `<button class="category active" onclick="filterLanguage('全部', this)">全部</button>` +
-      result.data.map(lang => `<button class="category" onclick="filterLanguage('${escapeJs(lang)}', this)">${escapeHtml(lang)}</button>`).join("");
-  } catch (error) {
-    console.error("載入語言失敗", error);
-  }
-}
-
-async function loadCategories() {
-  try {
-    const result = await apiGet({ action: "categories" });
-    if (!result.success || !Array.isArray(result.data)) return;
-
-    const container = document.getElementById("categoryContainer");
-    if (!container) return;
-
-    container.innerHTML = `<button class="category active" onclick="filterCategory('全部', this)">全部</button>` +
-      result.data.map(category => `<button class="category" onclick="filterCategory('${escapeJs(category)}', this)">${escapeHtml(category)}</button>`).join("");
-  } catch (error) {
-    console.error("載入分類失敗", error);
-  }
-}
-
-function filterLanguage(language, button) {
-  currentLanguage = language;
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) searchInput.value = "";
-  lastKeyword = "";
-
-  document.querySelectorAll("#languageContainer .category").forEach(btn => btn.classList.remove("active"));
-  if (button) button.classList.add("active");
-  fetchSongs("");
-}
-
-function filterCategory(category, button) {
-  currentCategory = category;
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) searchInput.value = "";
-  lastKeyword = "";
-
-  document.querySelectorAll("#categoryContainer .category").forEach(btn => btn.classList.remove("active"));
-  if (button) button.classList.add("active");
-  fetchSongs("");
-}
-
-/* =========================================================
  * 歌曲搜尋
  * ========================================================= */
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
   if (!list) return;
 
+  if (!keyword) {
+    allSongs = [];
+    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
+    return;
+  }
+
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
 
   try {
-    const result = await apiGet({ action: "songs", q: keyword, language: currentLanguage, category: currentCategory });
+    const result = await apiGet({ action: "songs", q: keyword, language: "全部", category: "全部" });
     if (!result.success) throw new Error(result.message || "歌曲搜尋失敗");
 
     allSongs = Array.isArray(result.data) ? result.data : [];
@@ -1182,25 +1098,24 @@ function renderQueue() {
   count.textContent = `${queue.length} 首`;
 
   if (queue.length === 0) {
-    list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>選擇歌曲開始點歌吧 🎤</div>`;
+    list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>搜尋並加入歌曲吧 🎤</div>`;
     return;
   }
 
   list.innerHTML = queue.map((song, index) => `
     <div class="song" style="display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-        <div class="queue-number" style="font-weight:bold;min-width:24px;text-align:center;">${index + 1}</div>
-        <div class="cover">🎤</div>
+        <div class="queue-number">${index + 1}</div>
+        <div class="cover" style="width:40px;height:40px;font-size:0.9rem;">🎤</div>
         <div class="song-info" style="min-width:0;flex:1;">
           <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
-          <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
-            ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+          <div class="artist">
+            ${escapeHtml(song.artist)}
           </div>
         </div>
       </div>
-      <div class="song-actions" style="margin-left:10px;">
-        <button class="remove-btn" onclick="removeSong(${song.queueId})" style="padding:4px 8px;">×</button>
+      <div class="song-actions" style="margin-left:8px;">
+        <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
       </div>
     </div>
   `).join("");
@@ -1485,16 +1400,15 @@ async function openHistory() {
     list.innerHTML = result.data.map(song => `
       <div class="song" style="display:flex;align-items:center;justify-content:space-between;margin:0 0 10px 0;">
         <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-          <div class="cover">📜</div>
+          <div class="cover" style="width:40px;height:40px;font-size:0.9rem;">📜</div>
           <div class="song-info" style="min-width:0;flex:1;">
             <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
-            <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
-              ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+            <div class="artist">
+              ${escapeHtml(song.artist)}
             </div>
           </div>
         </div>
-        <div class="song-actions" style="margin-left:10px;">
+        <div class="song-actions" style="margin-left:8px;">
           <button class="add-btn" onclick="addHistorySong('${escapeJs(song.song_no)}', '${escapeJs(song.title)}', '${escapeJs(song.artist)}', '${escapeJs(song.brand)}', '${escapeJs(song.language)}')">＋ 點歌</button>
         </div>
       </div>
