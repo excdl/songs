@@ -599,6 +599,149 @@ audio {
 #categoryContainer {
   display: none !important;
 }
+
+/* =========================================================
+ * 📱 平板與手機響應式優化 (Responsive Styles)
+ * ========================================================= */
+
+/* 防止手機端輸入框聚焦時自動放大 (字體需 >= 16px) */
+@media (max-width: 768px) {
+  html {
+    font-size: 100%; /* 微調基本字型讓排版在小螢幕更舒適 */
+  }
+
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* 頂端導覽列調整 */
+  header {
+    height: 65px;
+    padding: 0 15px;
+  }
+
+  .logo {
+    font-size: 1.15rem;
+  }
+
+  .customer-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  /* 主內容區塊改為單欄，取消間距過大 */
+  main {
+    padding: 15px;
+  }
+
+  .content {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  /* 搜尋列與排序區塊調整 */
+  .search-area {
+    gap: 8px;
+  }
+
+  .search-box input, 
+  .sort-box select {
+    height: 46px;
+    font-size: 1rem; /* 保持 16px 等級防縮放 */
+  }
+
+  /* 快速搜尋分類標籤支援橫向滑動，避免擠壓 */
+  .quick-search {
+    padding: 12px;
+  }
+
+  .quick-row {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .quick-row::-webkit-scrollbar {
+    display: none; /* 隱藏捲軸保持簡潔 */
+  }
+
+  .category {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+  }
+
+  /* 歌曲項目調整，增加觸控友善度 */
+  .song {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .cover {
+    width: 48px;
+    height: 48px;
+    font-size: 1.1rem;
+  }
+
+  .song-title {
+    font-size: 0.95rem;
+  }
+
+  .artist {
+    font-size: 0.8rem;
+  }
+
+  .add-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .favorite {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* 待播清單與播放器面板 */
+  .queue-panel {
+    position: static;
+    padding: 15px;
+  }
+
+  .queue-list {
+    max-height: 280px; /* 手機上縮減待播清單高度，避免佔滿畫面 */
+  }
+
+  /* 彈跳視窗滿版或貼邊優化 */
+  .modal-box {
+    max-width: 100%;
+    max-height: 95vh;
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .modal-input {
+    height: 46px;
+    font-size: 1rem;
+  }
+}
+
+/* 針對極小螢幕手機 (如 iPhone SE 等) 的微調 */
+@media (max-width: 480px) {
+  header {
+    padding: 0 10px;
+  }
+  
+  .logo {
+    font-size: 1rem;
+  }
+
+  .customer-info {
+    display: none; /* 隱藏冗長文字，保留按鈕 */
+  }
+}
+
 </style>
 </head>
 <body>
