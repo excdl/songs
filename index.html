@@ -183,6 +183,44 @@ main {
 .sort-box select:focus {
   border-color: #9b5cff;
 }
+.quick-search {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(18,18,29,.75);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 15px;
+}
+.quick-title {
+  color: #aaa;
+  font-size: 0.82rem;
+  margin-bottom: 10px;
+}
+.quick-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+.category {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 30px;
+  background: #171725;
+  color: #aaa;
+  border: 1px solid #2d2d3d;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: .2s;
+}
+.category:hover {
+  background: #29293d;
+  color: white;
+}
+.category.active {
+  color: white;
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  border-color: transparent;
+}
 .content {
   display: grid;
   grid-template-columns: 1fr 420px;
@@ -601,12 +639,16 @@ audio {
       </select>
     </div>
   </div>
+  <div class="quick-search">
+    <div class="quick-title">快速搜尋</div>
+    <div class="quick-row" id="languageContainer"></div>
+  </div>
   
   <div class="content">
     <section>
       <div class="section-title">🎵 歌曲列表</div>
       <div class="song-list" id="songList">
-        <div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>
+        <div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>
       </div>
     </section>
     <aside class="queue-panel">
@@ -698,6 +740,7 @@ let lastKeyword = "";
 let editingCustomerId = null;
 let ktvInitialized = false;
 let authChecking = false;
+let syncInterval = null;
 
 /* =========================================================
  * localStorage 安全讀取
@@ -907,6 +950,9 @@ function initKtvSystem() {
 
   renderQueue();
   updateCustomerUI();
+  loadLanguages();
+  loadCategories();
+  startQueueSync(); // 啟動多人點歌自動同步
 
   const audioPlayer = document.getElementById("audioPlayer");
   if (audioPlayer) audioPlayer.volume = 0.8;
@@ -916,18 +962,12 @@ function initKtvSystem() {
     searchInput.addEventListener("input", function () {
       clearTimeout(searchTimer);
       const keyword = this.value.trim();
-
-      if (!keyword) {
-        lastKeyword = "";
-        allSongs = [];
-        document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
-        return;
-      }
+      lastKeyword = keyword;
 
       searchTimer = setTimeout(function () {
-        lastKeyword = keyword;
+        // 確保輸入中不會因為閃退而被清空
         fetchSongs(keyword);
-      }, 250);
+      }, 200);
     });
   }
 
@@ -964,6 +1004,29 @@ function initKtvSystem() {
 }
 
 /* =========================================================
+ * 多人點歌自動同步機制
+ * ========================================================= */
+function startQueueSync() {
+  if (syncInterval) clearInterval(syncInterval);
+  // 每 3 秒背景同步一次待播清單與當前客戶狀態
+  syncInterval = setInterval(async () => {
+    try {
+      const result = await apiGet({ action: "getQueue" });
+      if (result && result.success && Array.isArray(result.queue)) {
+        // 若遠端資料與本地不一致，進行靜默同步更新
+        if (JSON.stringify(result.queue) !== JSON.stringify(queue)) {
+          queue = result.queue;
+          saveQueue();
+          renderQueue();
+        }
+      }
+    } catch (e) {
+      // 網路暫時中斷時忽略，避免干擾使用者
+    }
+  }, 3000);
+}
+
+/* =========================================================
  * API GET & POST
  * ========================================================= */
 async function apiGet(params) {
@@ -984,17 +1047,76 @@ async function apiPost(data) {
 }
 
 /* =========================================================
- * 歌曲搜尋
+ * 語言與分類載入（改為指定保留：粵語、日文、越語）
+ * ========================================================= */
+async function loadLanguages() {
+  // 指定保留的語言清單
+  const allowedLangs = ["粵語", "日文", "越語"];
+  const container = document.getElementById("languageContainer");
+  if (!container) return;
+
+  container.innerHTML = `<button class="category active" onclick="filterLanguage('全部', this)">全部</button>` +
+    allowedLangs.map(lang => `<button class="category" onclick="filterLanguage('${escapeJs(lang)}', this)">${escapeHtml(lang)}</button>`).join("");
+}
+
+async function loadCategories() {
+  try {
+    const result = await apiGet({ action: "categories" });
+    if (!result.success || !Array.isArray(result.data)) return;
+
+    const container = document.getElementById("categoryContainer");
+    if (!container) return;
+
+    container.innerHTML = `<button class="category active" onclick="filterCategory('全部', this)">全部</button>` +
+      result.data.map(category => `<button class="category" onclick="filterCategory('${escapeJs(category)}', this)">${escapeHtml(category)}</button>`).join("");
+  } catch (error) {
+    console.error("載入分類失敗", error);
+  }
+}
+
+function filterLanguage(language, button) {
+  currentLanguage = language;
+  const searchInput = document.getElementById("searchInput");
+  const keyword = searchInput ? searchInput.value.trim() : "";
+
+  document.querySelectorAll("#languageContainer .category").forEach(btn => btn.classList.remove("active"));
+  if (button) button.classList.add("active");
+  fetchSongs(keyword);
+}
+
+function filterCategory(category, button) {
+  currentCategory = category;
+  const searchInput = document.getElementById("searchInput");
+  const keyword = searchInput ? searchInput.value.trim() : "";
+
+  document.querySelectorAll("#categoryContainer .category").forEach(btn => btn.classList.remove("active"));
+  if (button) button.classList.add("active");
+  fetchSongs(keyword);
+}
+
+/* =========================================================
+ * 歌曲搜尋（修復閃退與無結果問題）
  * ========================================================= */
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
   if (!list) return;
+
+  // 若尚未輸入關鍵字且沒有選擇特定語言，顯示提示
+  if (!keyword && currentLanguage === "全部" && currentCategory === "全部") {
+    allSongs = [];
+    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>`;
+    return;
+  }
 
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
 
   try {
     const result = await apiGet({ action: "songs", q: keyword, language: currentLanguage, category: currentCategory });
     if (!result.success) throw new Error(result.message || "歌曲搜尋失敗");
+
+    // 確保輸入框在載入期間被修改時，若使用者還在打字，不被舊的回應覆蓋
+    const currentInputVal = document.getElementById("searchInput").value.trim();
+    if (currentInputVal !== keyword && keyword !== "") return;
 
     allSongs = Array.isArray(result.data) ? result.data : [];
     renderSongList();
@@ -1058,17 +1180,25 @@ function renderSongList() {
 /* =========================================================
  * 加入歌曲與待播清單
  * ========================================================= */
-function addSong(songNo) {
+async function addSong(songNo) {
   const song = allSongs.find(item => String(item.song_no) === String(songNo));
   if (!song) {
     showToast("找不到歌曲");
     return;
   }
 
-  queue.push({ ...song, queueId: Date.now() + Math.random() });
+  const newQueueItem = { ...song, queueId: Date.now() + Math.random() };
+  queue.push(newQueueItem);
   saveQueue();
   renderQueue();
   showToast(`已點歌：${song.title}`);
+
+  // 同步至後端，供其他多人端即時拿到更新
+  try {
+    await apiPost({ action: "updateQueue", queue });
+  } catch (e) {
+    console.warn("同步歌單至後端失敗", e);
+  }
 }
 
 function renderQueue() {
@@ -1103,11 +1233,17 @@ function renderQueue() {
   `).join("");
 }
 
-function removeSong(queueId) {
+async function removeSong(queueId) {
   queue = queue.filter(song => song.queueId !== queueId);
   saveQueue();
   renderQueue();
   showToast("已移除歌曲");
+
+  try {
+    await apiPost({ action: "updateQueue", queue });
+  } catch (e) {
+    console.warn("同步歌單至後端失敗", e);
+  }
 }
 
 /* =========================================================
@@ -1136,7 +1272,7 @@ function playCurrent() {
   });
 }
 
-function nextSong() {
+async function nextSong() {
   if (queue.length === 0) {
     currentSong = null;
     document.getElementById("currentTitle").textContent = "尚未播放";
@@ -1155,6 +1291,12 @@ function nextSong() {
   saveQueue();
   renderQueue();
   playCurrent();
+
+  try {
+    await apiPost({ action: "updateQueue", queue });
+  } catch (e) {
+    console.warn("同步歌單至後端失敗", e);
+  }
 }
 
 /* =========================================================
@@ -1406,11 +1548,17 @@ function closeHistoryModal() {
   document.getElementById("historyModal").classList.remove("show");
 }
 
-function addHistorySong(songNo, title, artist, brand, language) {
+async function addHistorySong(songNo, title, artist, brand, language) {
   queue.push({ song_no: songNo, title, artist, brand, language, queueId: Date.now() + Math.random() });
   saveQueue();
   renderQueue();
   showToast(`已加入：${title}`);
+
+  try {
+    await apiPost({ action: "updateQueue", queue });
+  } catch (e) {
+    console.warn("同步歌單至後端失敗", e);
+  }
 }
 
 async function endService() {
@@ -1446,6 +1594,8 @@ async function endService() {
     localStorage.removeItem("currentCustomer");
     updateCustomerUI();
     showToast("本次服務已完成，歷史歌單已儲存");
+
+    await apiPost({ action: "updateQueue", queue: [] });
   } catch (error) {
     console.error(error);
     showToast(error.message || "歷史歌單儲存失敗，沒有清除資料");
