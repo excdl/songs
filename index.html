@@ -1,597 +1,1024 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KTV 點歌系統 - 桌號管理與前台彙整</title>
-  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
-  <style>
-    html { font-size: 130%; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
-      background: radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
-      color: #fff;
-      min-height: 100vh;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 25px;
-      background: rgba(15, 15, 25, 0.85);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .logo {
-      font-size: 1.3rem;
-      font-weight: bold;
-      background: linear-gradient(135deg, #ff2bd6, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .customer-area {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .customer-info {
-      font-size: 0.9rem;
-      color: #aaa;
-    }
-    .customer-btn {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #fff;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s;
-    }
-    .customer-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-    main {
-      max-width: 1200px;
-      margin: 20px auto;
-      padding: 0 15px;
-      display: grid;
-      grid-template-columns: 1fr 380px;
-      gap: 20px;
-    }
-    @media (max-width: 900px) {
-      main { grid-template-columns: 1fr; }
-    }
-    .card {
-      background: rgba(20, 20, 35, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 20px;
-      backdrop-filter: blur(10px);
-      margin-bottom: 20px;
-    }
-    .search-box {
-      width: 100%;
-      padding: 12px 16px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      color: #fff;
-      font-size: 1rem;
-      margin-bottom: 15px;
-    }
-    .search-box:focus {
-      outline: none;
-      border-color: #ff2bd6;
-    }
-    .song-list {
-      max-height: 500px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .song {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 15px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      transition: background 0.2s;
-    }
-    .song:hover {
-      background: rgba(255, 255, 255, 0.07);
-    }
-    .song-info {
-      flex: 1;
-      min-width: 0;
-      margin-right: 15px;
-    }
-    .song-title {
-      font-size: 1rem;
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 4px;
-    }
-    .artist {
-      font-size: 0.85rem;
-      color: #aaa;
-    }
-    .add-btn {
-      background: linear-gradient(135deg, #ff2bd6, #7c3aed);
-      border: none;
-      color: white;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-    .add-btn:hover {
-      opacity: 0.9;
-    }
-    .queue-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-height: 400px;
-      overflow-y: auto;
-    }
-    .queue-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 6px;
-      border-left: 4px solid #ff2bd6;
-    }
-    .remove-btn {
-      background: transparent;
-      border: none;
-      color: #ef4444;
-      cursor: pointer;
-      font-size: 1.1rem;
-      padding: 0 6px;
-    }
-    .empty {
-      text-align: center;
-      color: #777;
-      padding: 20px;
-      font-size: 0.9rem;
-    }
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(5px);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    .modal.show { display: flex; }
-    .modal-box {
-      background: #181824;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      padding: 25px;
-      width: 90%;
-      max-width: 450px;
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .modal-title { font-size: 1.1rem; font-weight: bold; }
-    .close-btn { background: none; border: none; color: #aaa; font-size: 1.2rem; cursor: pointer; }
-    .modal-input {
-      width: 100%;
-      padding: 10px 14px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
-      color: #fff;
-      font-size: 1rem;
-      margin-bottom: 15px;
-    }
-    .modal-input:focus { outline: none; border-color: #ff2bd6; }
-    .primary-btn {
-      width: 100%;
-      padding: 10px;
-      background: linear-gradient(135deg, #ff2bd6, #7c3aed);
-      border: none;
-      border-radius: 6px;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      z-index: 2000;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
-    }
-    .toast.show { opacity: 1; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KTV 點歌系統 - 據點驗證與點歌</title>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
+<style>
+html { font-size: 130%; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+  background: radial-gradient(circle at top, #24104d 0%, #0b0b16 45%, #050509 100%);
+  color: #fff;
+  min-height: 100vh;
+}
+
+/* 🔒 據點驗證全螢幕遮罩層 */
+#authOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 9, 0.96);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(12px);
+  transition: opacity 0.4s ease;
+}
+.auth-card {
+  background: #171725;
+  border: 1px solid #343449;
+  border-radius: 20px;
+  padding: 35px 25px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+}
+.auth-title {
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #ff2bd6, #8c5cff, #22d3ee);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.auth-desc {
+  color: #bbb;
+  font-size: 0.92rem;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+.auth-spinner {
+  width: 45px;
+  height: 45px;
+  border: 4px solid rgba(255,255,255,0.1);
+  border-top-color: #ff2bd6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.auth-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  color: white;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-top: 15px;
+  transition: opacity 0.2s;
+}
+.auth-btn:hover { opacity: 0.9; }
+.auth-error {
+  color: #ff4d6d;
+  font-size: 0.88rem;
+  margin-top: 15px;
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+/* 系統主介面樣式 */
+header {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 25px;
+  background: rgba(10,10,20,.92);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.logo {
+  font-size: 1.35rem;
+  font-weight: bold;
+  background: linear-gradient(90deg, #ff2bd6, #8c5cff, #22d3ee);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.customer-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.customer-info {
+  color: #bbb;
+  font-size: 0.85rem;
+}
+.customer-name {
+  color: white;
+  font-weight: bold;
+}
+.customer-btn {
+  background: #29293a;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #3a3a4d;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.customer-btn:hover { background: #3b3b50; }
+.staff-nav-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+main {
+  max-width: 1400px;
+  margin: auto;
+  padding: 25px;
+}
+.search-area {
+  margin-bottom: 15px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 250px;
+}
+.search-box input {
+  width: 100%;
+  height: 52px;
+  border: 1px solid #38384c;
+  border-radius: 12px;
+  padding: 0 20px 0 48px;
+  background: #151522;
+  color: white;
+  outline: none;
+  font-size: 1rem;
+}
+.search-box input:focus {
+  border-color: #9b5cff;
+  box-shadow: 0 0 0 3px rgba(155,92,255,.15);
+}
+.search-icon {
+  position: absolute;
+  left: 18px;
+  top: 15px;
+  font-size: 1.1rem;
+  color: #999;
+}
+.sort-box select {
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid #38384c;
+  background: #151522;
+  color: white;
+  outline: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.quick-search {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(18,18,29,.75);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 15px;
+}
+.quick-title {
+  color: #aaa;
+  font-size: 0.82rem;
+  margin-bottom: 10px;
+}
+.quick-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+.category {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 30px;
+  background: #171725;
+  color: #aaa;
+  border: 1px solid #2d2d3d;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: .2s;
+}
+.category:hover { background: #29293d; color: white; }
+.category.active {
+  color: white;
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  border-color: transparent;
+}
+.content {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 25px;
+}
+.section-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+.song-list {
+  display: grid;
+  gap: 12px;
+}
+.song {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(25,25,38,.75);
+  border-radius: 14px;
+  transition: .2s;
+}
+.song:hover {
+  background: #222235;
+  transform: translateY(-1px);
+}
+.cover {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.3rem;
+  background: linear-gradient(135deg, #ff2bd6, #653eff);
+}
+.song-info {
+  flex: 1;
+  min-width: 0;
+}
+.song-title {
+  font-size: 1rem;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.artist {
+  color: #999;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+.song-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.favorite {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #292938;
+  color: #aaa;
+  font-size: 1.1rem;
+  cursor: pointer;
+  border: none;
+}
+.favorite.active { color: #ff3e91; }
+.add-btn {
+  padding: 8px 14px;
+  border-radius: 9px;
+  color: white;
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.queue-panel {
+  background: rgba(18,18,29,.9);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  padding: 20px;
+  height: fit-content;
+  position: sticky;
+  top: 95px;
+}
+.queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.queue-count {
+  color: #aaa;
+  font-size: 0.85rem;
+}
+.queue-list {
+  display: grid;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+.remove-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #888;
+  background: transparent;
+  font-size: 1.2rem;
+  border: none;
+  cursor: pointer;
+}
+.player {
+  margin-top: 18px;
+  background: linear-gradient(135deg, #251040, #111126);
+  border-radius: 16px;
+  padding: 16px;
+}
+.now-playing { color: #aaa; font-size: 0.75rem; margin-bottom: 4px; }
+.current-title { font-size: 1rem; font-weight: bold; }
+.current-artist { font-size: 0.85rem; color: #888; margin-top: 3px; }
+audio { width: 100%; margin-top: 10px; }
+.player-controls { display: flex; gap: 8px; margin-top: 12px; }
+.control-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 9px;
+  background: #29293a;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.play-btn { background: linear-gradient(135deg, #ff2bd6, #744cff); }
+.volume { margin-top: 10px; }
+.volume input { width: 100%; }
+.end-service {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #e43b62, #9b2f80);
+  color: white;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.empty { color: #777; text-align: center; padding: 25px 10px; font-size: 0.9rem; }
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%) translateY(20px);
+  background: #242435;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 30px;
+  opacity: 0;
+  pointer-events: none;
+  transition: .3s;
+  z-index: 9999;
+  font-size: 0.9rem;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal.show { display: flex; }
+.modal-box {
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #171725;
+  border: 1px solid #343449;
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.modal-title { font-size: 1.1rem; font-weight: bold; }
+.close-btn {
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  background: #292938;
+  color: white;
+  font-size: 1.1rem;
+  border: none;
+  cursor: pointer;
+}
+.modal-input {
+  width: 100%;
+  height: 45px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 1px solid #3a3a4d;
+  background: #10101a;
+  color: white;
+  outline: none;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+.primary-btn {
+  width: 100%;
+  height: 45px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #ff2bd6, #744cff);
+  color: white;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.secondary-btn {
+  width: 100%;
+  height: 45px;
+  border-radius: 9px;
+  background: #292938;
+  color: white;
+  margin-top: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.customer-result { display: grid; gap: 10px; margin-top: 15px; }
+.customer-card {
+  padding: 14px;
+  background: #222235;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.customer-card-name { font-weight: bold; font-size: 1rem; }
+.customer-card-info { color: #888; font-size: 0.8rem; margin-top: 4px; }
+.customer-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.select-customer, .edit-customer {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.select-customer { background: linear-gradient(135deg, #ff2bd6, #744cff); }
+.edit-customer { background: #39394d; }
+.edit-customer-area { display: none; margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.08); }
+.edit-title { color: #aaa; margin-bottom: 10px; font-size: 0.85rem; }
+.edit-customer-id { color: #777; font-size: 0.75rem; margin-bottom: 10px; }
+#categoryContainer { display: none !important; }
+
+@media(max-width:900px) {
+  .content { grid-template-columns: 1fr; }
+  .queue-panel { position: static; }
+  header { padding: 0 15px; }
+  .logo { font-size: 1.1rem; }
+  .customer-info { display: none; }
+}
+</style>
 </head>
 <body>
 
-  <header>
-    <div class="logo">🎤 KTV 點歌系統</div>
-    <div class="customer-area">
-      <div class="customer-info" id="customerInfo">尚未選擇客戶</div>
-      <button class="customer-btn" onclick="openCustomerModal()">👤 選擇客戶／桌號</button>
-      <button class="customer-btn" onclick="openManagerQueueModal()" style="border-color: #ff2bd6; color: #ff2bd6;">🔒 前台彙整歌單</button>
-      <button class="customer-btn" id="clearCustomerBtn" style="display:none" onclick="clearCustomer()">清除</button>
+<!-- 🔒 據點安全性驗證遮罩 -->
+<div id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-title">🎤 據點安全驗證</div>
+    <div class="auth-desc" id="authDesc">正在取得您的 GPS 定位，請允許瀏覽器權限...</div>
+    <div class="auth-spinner" id="authSpinner"></div>
+    <div class="auth-error" id="authError"></div>
+    <button class="auth-btn" id="retryAuthBtn" style="display:none;" onclick="checkLocationAuth()">重新驗證據點</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo">🎤 KTV 點歌系統</div>
+  <div class="customer-area">
+    <div class="customer-info" id="customerInfo">尚未選擇客戶</div>
+    <button class="customer-btn" onclick="openCustomerModal()">👤 選擇客戶</button>
+    <button class="customer-btn" id="clearCustomerBtn" style="display:none" onclick="clearCustomer()">清除</button>
+    <button class="staff-nav-btn" onclick="openStaffModal()">📋 點歌員總表</button>
+  </div>
+</header>
+
+<main>
+  <div class="search-area">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="輸入歌名、歌手或歌號..." autocomplete="off">
     </div>
-  </header>
-
-  <main>
-    <!-- 左側：點歌搜尋與列表 -->
-    <section>
-      <div class="card">
-        <input type="text" class="search-box" id="searchInput" placeholder="輸入歌名、歌手或編號搜尋..." oninput="filterSongs()">
-        <div class="song-list" id="songList">
-          <div class="empty">正在載入歌曲庫...</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 右側：目前點歌清單 -->
-    <section>
-      <div class="card">
-        <div style="font-weight: bold; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-          <span>📋 已點待播清單</span>
-          <span style="font-size: 0.8rem; color: #aaa;" id="queueCount">0 首</span>
-        </div>
-        <div class="queue-list" id="queueList">
-          <div class="empty">目前沒有點歌</div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- 客戶／桌號設定 Modal -->
-  <div class="modal" id="customerModal">
-    <div class="modal-box">
-      <div class="modal-header">
-        <div class="modal-title">設定目前客戶與桌號</div>
-        <button class="close-btn" onclick="closeCustomerModal()">×</button>
-      </div>
-      <input type="text" class="modal-input" id="inputCustomerName" placeholder="請輸入客戶／點歌人姓名...">
-      <input type="text" class="modal-input" id="inputTableNo" placeholder="請輸入桌號或包廂（例如：A1、VIP包廂）...">
-      <button class="primary-btn" onclick="saveCustomer()">確認並開始點歌</button>
+    <div class="sort-box">
+      <select id="sortSelect" onchange="renderSongList()">
+        <option value="default">預設排序</option>
+        <option value="title_len_asc">歌名字數：少 ➔ 多</option>
+        <option value="title_len_desc">歌名字數：多 ➔ 少</option>
+        <option value="artist_len_asc">歌手字數：少 ➔ 多</option>
+        <option value="artist_len_desc">歌手字數：多 ➔ 少</option>
+      </select>
     </div>
   </div>
+  <div class="quick-search">
+    <div class="quick-title">快速搜尋</div>
+    <div class="quick-row" id="languageContainer"></div>
+  </div>
+  
+  <div class="content">
+    <section>
+      <div class="section-title">🎵 歌曲列表</div>
+      <div class="song-list" id="songList">
+        <div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>
+      </div>
+    </section>
+    <aside class="queue-panel">
+      <div class="queue-header">
+        <div class="section-title">📋 我的桌次待播</div>
+        <div class="queue-count" id="queueCount">0 首</div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <input type="text" id="tableNoInput" class="modal-input" style="height:38px;margin-bottom:0;font-size:0.9rem;" placeholder="請輸入您的桌號 (例如: A01, 包廂3)" onchange="updateTableNo(this.value)">
+      </div>
+      <div class="queue-list" id="queueList"></div>
+      <div class="player">
+        <div class="now-playing">NOW PLAYING</div>
+        <div class="current-title" id="currentTitle">尚未播放</div>
+        <div class="current-artist" id="currentArtist">-</div>
+        <audio id="audioPlayer" controls></audio>
+        <div class="player-controls">
+          <button class="control-btn play-btn" onclick="playCurrent()">▶ 播放</button>
+          <button class="control-btn" onclick="nextSong()">⏭ 下一首</button>
+        </div>
+        <div class="volume">
+          <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8">
+        </div>
+        <button class="end-service" onclick="endService()">🔚 結束本次服務</button>
+      </div>
+    </aside>
+  </div>
+</main>
 
-  <!-- 🔒 前台管理員彙整歌單 Modal -->
-  <div class="modal" id="managerQueueModal">
-    <div class="modal-box" style="max-width: 800px;">
-      <div class="modal-header">
-        <div class="modal-title">🔒 前台管理員 - 待播歌單總覽</div>
-        <button class="close-btn" onclick="closeManagerQueueModal()">×</button>
+<!-- 客戶管理 Modal -->
+<div class="modal" id="customerModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">👤 客戶管理</div>
+      <button class="close-btn" onclick="closeCustomerModal()">×</button>
+    </div>
+    <input class="modal-input" id="customerSearch" placeholder="請輸入客戶姓名搜尋..." autocomplete="off">
+    <div class="customer-result" id="customerResults">
+      <div class="empty">請輸入客戶姓名</div>
+    </div>
+    <button class="secondary-btn" onclick="showCreateCustomer()">＋ 新增客戶</button>
+    <div id="createCustomerArea" style="display:none;margin-top:20px">
+      <div style="color:#aaa;margin-bottom:8px;font-size:0.85rem;">新增客戶</div>
+      <input class="modal-input" id="newCustomerName" placeholder="客戶姓名">
+      <input class="modal-input" id="newCustomerPhone" placeholder="電話（選填）">
+      <input class="modal-input" id="newCustomerNote" placeholder="備註（選填）">
+      <button class="primary-btn" onclick="createCustomer()">建立客戶</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📋 點歌員總表 Modal（需密碼） -->
+<div class="modal" id="staffModal">
+  <div class="modal-box" style="max-width: 750px;">
+    <div class="modal-header">
+      <div class="modal-title">🔒 點歌員全場彙整總表</div>
+      <button class="close-btn" onclick="closeStaffModal()">×</button>
+    </div>
+    
+    <!-- 密碼驗證區 -->
+    <div id="staffAuthBox">
+      <div style="color:#bbb;margin-bottom:12px;font-size:0.9rem;">此區域僅限點歌員檢視，請輸入管理密碼：</div>
+      <input type="password" class="modal-input" id="staffPasswordInput" placeholder="請輸入密碼">
+      <button class="primary-btn" onclick="verifyStaffPassword()">解鎖總表</button>
+    </div>
+
+    <!-- 總表內容區 (解鎖後顯示) -->
+    <div id="staffContentBox" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="color:#aaa;font-size:0.9rem;">全場各桌點歌彙整清單（可由點歌員依序加入播放清單）：</div>
+        <button class="customer-btn" onclick="loadStaffSummary()">🔄 重新整理</button>
       </div>
-      <div id="managerLoginArea">
-        <div style="color: #aaa; font-size: 0.9rem; margin-bottom: 15px;">請輸入前台管理員密碼以檢視所有包廂／桌號的彙整清單：</div>
-        <input type="password" class="modal-input" id="managerPasswordInput" placeholder="請輸入管理員密碼..." autocomplete="current-password">
-        <button class="primary-btn" onclick="verifyManagerPassword()">登入檢視</button>
-      </div>
-      <div id="managerContentArea" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <div style="color: #aaa; font-size: 0.85rem;" id="managerQueueCount">總計 0 首待播</div>
-          <button class="customer-btn" onclick="loadManagerQueue()">🔄 重新整理</button>
-        </div>
-        <div class="queue-list" id="managerQueueList" style="max-height: 500px; overflow-y: auto;">
-          <div class="empty">載入中...</div>
-        </div>
+      <div id="staffSummaryList" style="display:grid;gap:12px;max-height:60vh;overflow-y:auto;">
+        <div class="empty">載入中...</div>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="toast" id="toast">提示訊息</div>
+<div class="toast" id="toast"></div>
 
-  <script>
-    // 請確認此處的 GAS API 網址是否正確指向您的後端
-    const API_URL = "https://script.google.com/macros/s/AKfycbzQp2B6XoJmB8T.../exec"; 
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwuj5E2BGA5zsLvBd3RyS2S21d40UqJiopmY1JOieeWIKLNL-AmaWOMIoojvxF3yHL-/exec";
 
-    let allSongs = [];
-    let queue = [];
-    let currentCustomer = null;
-    const MANAGER_PASSWORD = "1234"; // 預設管理員密碼，可自行修改
+let allSongs = [];
+let currentLanguage = "全部";
+let currentCategory = "全部";
+let currentCustomer = null;
+let currentTableNo = "";
+let queue = [];
+let favorites = [];
+let currentSong = null;
+let searchTimer = null;
+let customerSearchTimer = null;
+let ktvInitialized = false;
+let authChecking = false;
+let syncInterval = null;
 
-    window.addEventListener("DOMContentLoaded", () => {
-      loadSavedCustomer();
-      loadQueueFromLocal();
-      fetchSongs();
-    });
+function loadLocalStorage() {
+  try {
+    const savedQueue = localStorage.getItem("ktvQueue");
+    queue = savedQueue ? JSON.parse(savedQueue) : [];
+  } catch (e) { queue = []; }
 
-    function showToast(msg) {
-      const t = document.getElementById("toast");
-      t.textContent = msg;
-      t.classList.add("show");
-      setTimeout(() => t.classList.remove("show"), 2500);
+  try {
+    const savedFavorites = localStorage.getItem("ktvFavorites");
+    favorites = savedFavorites ? JSON.parse(savedFavorites).map(String) : [];
+  } catch (e) { favorites = []; }
+
+  try {
+    const savedCustomer = localStorage.getItem("currentCustomer");
+    if (savedCustomer) currentCustomer = JSON.parse(savedCustomer);
+  } catch (e) { currentCustomer = null; }
+
+  try {
+    const savedTable = localStorage.getItem("currentTableNo");
+    if (savedTable) {
+      currentTableNo = savedTable;
+      document.getElementById("tableNoInput").value = savedTable;
+    }
+  } catch (e) { currentTableNo = ""; }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  loadLocalStorage();
+  checkLocationAuth();
+});
+
+async function checkLocationAuth() {
+  if (authChecking) return;
+  authChecking = true;
+  const descEl = document.getElementById("authDesc");
+  const spinnerEl = document.getElementById("authSpinner");
+  const errorEl = document.getElementById("authError");
+  const retryBtn = document.getElementById("retryAuthBtn");
+
+  descEl.textContent = "正在確認網路與定位...";
+  try {
+    let publicIp = "";
+    try {
+      const ipRes = await fetch("https://api.ipify.org?format=json");
+      if (ipRes.ok) publicIp = (await ipRes.json()).ip || "";
+    } catch (e) {}
+
+    if (!navigator.geolocation) {
+      await verifyByServer(0, 0, publicIp);
+      return;
     }
 
-    function loadSavedCustomer() {
-      const saved = localStorage.getItem("currentCustomer");
-      if (saved) {
-        try {
-          currentCustomer = JSON.parse(saved);
-          document.getElementById("customerInfo").textContent = `${currentCustomer.name} (${currentCustomer.tableNo || "散客"})`;
-          document.getElementById("clearCustomerBtn").style.display = "inline-block";
-        } catch (e) {
-          currentCustomer = null;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        await verifyByServer(pos.coords.latitude, pos.coords.longitude, publicIp);
+      },
+      async () => {
+        if (publicIp) await verifyByServer(0, 0, publicIp);
+        else authFailed("無法取得 GPS 定位與 IP。");
+      },
+      { timeout: 15000, enableHighAccuracy: true }
+    );
+  } catch (err) {
+    authFailed(err.message);
+  } finally {
+    authChecking = false;
+  }
+}
+
+async function verifyByServer(lat, lng, ip) {
+  const params = new URLSearchParams({ action: "verifyLocation", lat, lng, ip });
+  const res = await fetch(`${API_URL}?${params.toString()}`);
+  const result = await res.json();
+
+  if (result.success && result.rangeStatus === "有效打卡區") {
+    document.getElementById("authOverlay").style.opacity = "0";
+    setTimeout(() => {
+      document.getElementById("authOverlay").style.display = "none";
+      showToast("據點驗證成功！");
+      initKtvSystem();
+    }, 400);
+  } else {
+    authFailed(`❌ 驗證未通過\n距離最近據點：${result.distance}公尺`);
+  }
+}
+
+function authFailed(msg) {
+  document.getElementById("authDesc").textContent = "存取受阻";
+  document.getElementById("authSpinner").style.display = "none";
+  document.getElementById("authError").textContent = msg;
+  document.getElementById("retryAuthBtn").style.display = "block";
+}
+
+function initKtvSystem() {
+  if (ktvInitialized) return;
+  ktvInitialized = true;
+  renderQueue();
+  updateCustomerUI();
+  loadLanguages();
+  startQueueSync();
+
+  document.getElementById("searchInput").addEventListener("input", function() {
+    clearTimeout(searchTimer);
+    const kw = this.value.trim();
+    searchTimer = setTimeout(() => fetchSongs(kw), 200);
+  });
+
+  document.getElementById("customerSearch").addEventListener("input", function() {
+    clearTimeout(customerSearchTimer);
+    const kw = this.value.trim();
+    if (!kw) {
+      document.getElementById("customerResults").innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
+      return;
+    }
+    customerSearchTimer = setTimeout(() => searchCustomers(kw), 250);
+  });
+}
+
+function updateTableNo(val) {
+  currentTableNo = val.trim();
+  localStorage.setItem("currentTableNo", currentTableNo);
+  showToast(`已設定桌號：${currentTableNo || "無"}`);
+  syncQueueToServer();
+}
+
+function startQueueSync() {
+  if (syncInterval) clearInterval(syncInterval);
+  syncInterval = setInterval(async () => {
+    try {
+      const res = await apiGet({ action: "getQueue", table_no: currentTableNo });
+      if (res && res.success && Array.isArray(res.queue)) {
+        if (JSON.stringify(res.queue) !== JSON.stringify(queue)) {
+          queue = res.queue;
+          saveQueue();
+          renderQueue();
         }
       }
-    }
+    } catch (e) {}
+  }, 3000);
+}
 
-    function openCustomerModal() {
-      document.getElementById("customerModal").classList.add("show");
-      if (currentCustomer) {
-        document.getElementById("inputCustomerName").value = currentCustomer.name || "";
-        document.getElementById("inputTableNo").value = currentCustomer.tableNo || "";
-      }
-    }
+async function apiGet(params) {
+  const query = new URLSearchParams(params);
+  const res = await fetch(`${API_URL}?${query.toString()}`);
+  return res.json();
+}
 
-    function closeCustomerModal() {
-      document.getElementById("customerModal").classList.remove("show");
-    }
+async function apiPost(data) {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
 
-    function saveCustomer() {
-      const name = document.getElementById("inputCustomerName").value.trim();
-      const tableNo = document.getElementById("inputTableNo").value.trim() || "散客區";
-      if (!name) {
-        showToast("請輸入客戶姓名");
-        return;
-      }
-      currentCustomer = { name, tableNo, customer_id: "C_" + Date.now() };
-      localStorage.setItem("currentCustomer", JSON.stringify(currentCustomer));
-      document.getElementById("customerInfo").textContent = `${name} (${tableNo})`;
-      document.getElementById("clearCustomerBtn").style.display = "inline-block";
-      closeCustomerModal();
-      showToast("客戶與桌號設定完成");
-    }
+async function loadLanguages() {
+  const allowedLangs = ["粵語", "日文", "越語"];
+  const container = document.getElementById("languageContainer");
+  if (!container) return;
+  container.innerHTML = `<button class="category active" onclick="filterLanguage('全部', this)">全部</button>` +
+    allowedLangs.map(l => `<button class="category" onclick="filterLanguage('${l}', this)">${l}</button>`).join("");
+}
 
-    function clearCustomer() {
-      localStorage.removeItem("currentCustomer");
-      currentCustomer = null;
-      document.getElementById("customerInfo").textContent = "尚未選擇客戶";
-      document.getElementById("clearCustomerBtn").style.display = "none";
-      showToast("已清除客戶資訊");
-    }
+function filterLanguage(lang, btn) {
+  currentLanguage = lang;
+  document.querySelectorAll("#languageContainer .category").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  fetchSongs(document.getElementById("searchInput").value.trim());
+}
 
-    async function fetchSongs() {
-      try {
-        const res = await fetch(API_URL + "?action=songs");
-        const data = await res.json();
-        if (data.success && Array.isArray(data.songs)) {
-          allSongs = data.songs;
-          renderSongs(allSongs);
-        } else {
-          document.getElementById("songList").innerHTML = `<div class="empty">載入歌曲失敗</div>`;
-        }
-      } catch (e) {
-        console.error(e);
-        document.getElementById("songList").innerHTML = `<div class="empty">無法連線至伺服器</div>`;
-      }
-    }
+async function fetchSongs(keyword = "") {
+  const list = document.getElementById("songList");
+  if (!keyword && currentLanguage === "全部") {
+    allSongs = [];
+    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
+    return;
+  }
+  list.innerHTML = `<div class="empty">搜尋中...</div>`;
+  try {
+    const res = await apiGet({ action: "songs", q: keyword, language: currentLanguage });
+    allSongs = res.data || [];
+    renderSongList();
+  } catch (e) {
+    list.innerHTML = `<div class="empty">搜尋失敗</div>`;
+  }
+}
 
-    function renderSongs(songs) {
-      const listEl = document.getElementById("songList");
-      if (songs.length === 0) {
-        listEl.innerHTML = `<div class="empty">沒有找到相關歌曲</div>`;
-        return;
-      }
-      listEl.innerHTML = songs.slice(0, 100).map(song => `
-        <div class="song">
-          <div class="song-info">
-            <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
-            <div class="artist">${escapeHtml(song.artist || "未知歌手")}</div>
-          </div>
-          <button class="add-btn" onclick="addSong('${escapeJs(song.song_no)}')">點歌</button>
+function renderSongList() {
+  const list = document.getElementById("songList");
+  if (!allSongs.length) {
+    list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
+    return;
+  }
+  list.innerHTML = allSongs.map(song => {
+    const isFav = favorites.includes(String(song.song_no));
+    return `
+      <div class="song">
+        <div class="cover">🎤</div>
+        <div class="song-info">
+          <div class="song-title">[${song.song_no}] ${escapeHtml(song.title)}</div>
+          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "")}</div>
         </div>
-      `).join("");
-    }
-
-    function filterSongs() {
-      const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
-      if (!keyword) {
-        renderSongs(allSongs);
-        return;
-      }
-      const filtered = allSongs.filter(s => 
-        String(s.song_no).toLowerCase().includes(keyword) ||
-        String(s.title).toLowerCase().includes(keyword) ||
-        String(s.artist).toLowerCase().includes(keyword)
-      );
-      renderSongs(filtered);
-    }
-
-    async function addSong(songNo) {
-      if (!currentCustomer) {
-        showToast("請先設定客戶與桌號");
-        openCustomerModal();
-        return;
-      }
-
-      const song = allSongs.find(item => String(item.song_no) === String(songNo));
-      if (!song) {
-        showToast("找不到歌曲");
-        return;
-      }
-
-      const newQueueItem = {
-        ...song,
-        queueId: Date.now() + Math.random(),
-        tableNo: currentCustomer.tableNo,
-        customerName: currentCustomer.name
-      };
-
-      queue.push(newQueueItem);
-      saveQueueToLocal();
-      renderQueue();
-      showToast(`已點歌：${song.title}`);
-
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify({ action: "updateQueue", queue })
-        });
-      } catch (e) {
-        console.warn("後端同步失敗", e);
-      }
-    }
-
-    function loadQueueFromLocal() {
-      const saved = localStorage.getItem("ktvQueue");
-      if (saved) {
-        try { queue = JSON.parse(saved); } catch(e) { queue = []; }
-      }
-      renderQueue();
-    }
-
-    function saveQueueToLocal() {
-      localStorage.setItem("ktvQueue", JSON.stringify(queue));
-    }
-
-    function renderQueue() {
-      const listEl = document.getElementById("queueList");
-      document.getElementById("queueCount").textContent = `${queue.length} 首`;
-
-      if (queue.length === 0) {
-        listEl.innerHTML = `<div class="empty">目前沒有點歌</div>`;
-        return;
-      }
-
-      listEl.innerHTML = queue.map((song, index) => `
-        <div class="queue-item">
-          <div style="flex:1; min-width:0; margin-right: 10px;">
-            <div style="font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              <span style="color:#ff2bd6;">[${escapeHtml(song.tableNo || "散客")}]</span> ${escapeHtml(song.title)}
-            </div>
-            <div style="font-size: 0.75rem; color: #aaa;">${escapeHtml(song.artist)} · ${escapeHtml(song.customerName || "")}</div>
-          </div>
-          <button class="remove-btn" onclick="removeQueue(${song.queueId})">×</button>
+        <div class="song-actions">
+          <button class="favorite ${isFav ? "active" : ""}" onclick="toggleFavorite('${song.song_no}')">${isFav ? "♥" : "♡"}</button>
+          <button class="add-btn" onclick="addSong('${song.song_no}')">＋ 點歌</button>
         </div>
-      `).join("");
+      </div>
+    `;
+  }).join("");
+}
+
+async function addSong(songNo) {
+  const song = allSongs.find(s => String(s.song_no) === String(songNo));
+  if (!song) return;
+
+  const newItem = { ...song, queueId: Date.now() + Math.random(), table_no: currentTableNo || "散客" };
+  queue.push(newItem);
+  saveQueue();
+  renderQueue();
+  showToast(`已點歌：${song.title}`);
+  await syncQueueToServer();
+}
+
+async function syncQueueToServer() {
+  try {
+    await apiPost({ action: "updateQueue", table_no: currentTableNo || "散客", queue });
+  } catch (e) {}
+}
+
+function renderQueue() {
+  const list = document.getElementById("queueList");
+  const count = document.getElementById("queueCount");
+  count.textContent = `${queue.length} 首`;
+  if (!queue.length) {
+    list.innerHTML = `<div class="empty">目前沒有待播歌曲</div>`;
+    return;
+  }
+  list.innerHTML = queue.map((song, i) => `
+    <div class="song" style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <div style="font-weight:bold;min-width:24px;text-align:center;color:#8d7aff;">${i+1}</div>
+        <div class="cover" style="width:40px;height:40px;font-size:1rem;">🎤</div>
+        <div class="song-info" style="min-width:0;flex:1;">
+          <div class="song-title">[${song.song_no}] ${escapeHtml(song.title)}</div>
+          <div class="artist">${escapeHtml(song.artist)}</div>
+        </div>
+      </div>
+      <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
+    </div>
+  `).join("");
+}
+
+async function removeSong(queueId) {
+  queue = queue.filter(s => s.queueId !== queueId);
+  saveQueue();
+  renderQueue();
+  await syncQueueToServer();
+}
+
+function saveQueue() {
+  localStorage.setItem("ktvQueue", JSON.stringify(queue));
+}
+
+function playCurrent() {
+  if (!currentSong && queue.length > 0) currentSong = queue[0];
+  if (!currentSong) { showToast("沒有待播歌曲"); return; }
+  const player = document.getElementById("audioPlayer");
+  player.src = currentSong.media || "";
+  document.getElementById("currentTitle").textContent = `[${currentSong.song_no}] ${currentSong.title}`;
+  document.getElementById("currentArtist").textContent = currentSong.artist;
+  player.play().catch(() => showToast("播放失敗或無音樂檔"));
+}
+
+async function nextSong() {
+  if (!queue.length) { showToast("沒有下一首"); return; }
+  currentSong = queue.shift();
+  saveQueue();
+  renderQueue();
+  playCurrent();
+  await syncQueueToServer();
+}
+
+// ---------------------------------------------------------
+// 點歌員總表與密碼功能
+// ---------------------------------------------------------
+function openStaffModal() {
+  document.getElementById("staffModal").classList.add("show");
+  document.getElementById("staffAuthBox").style.display = "block";
+  document.getElementById("staffContentBox").style.display = "none";
+  document.getElementById("staffPasswordInput").value = "";
+}
+
+function closeStaffModal() {
+  document.getElementById("staffModal").classList.remove("show");
+}
+
+async function verifyStaffPassword() {
+  const pwd = document.getElementById("staffPasswordInput").value.trim();
+  try {
+    const res = await apiGet({ action: "verifyStaffPassword", password: pwd });
+    if (res.success) {
+      document.getElementById("staffAuthBox").style.display = "none";
+      document.getElementById("staffContentBox").style.display = "block";
+      loadStaffSummary();
+      showToast("解鎖成功！");
+    } else {
+      showToast("密碼錯誤");
     }
+  } catch (e) {
+    showToast("驗證失敗");
+  }
+}
 
-    async function removeQueue(queueId) {
-      queue = queue.filter(item => item.queueId !== queueId);
-      saveQueueToLocal();
-      renderQueue();
-      showToast("已從清單移除");
-
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify({ action: "updateQueue", queue })
-        });
-      } catch (e) {}
+async function loadStaffSummary() {
+  const box = document.getElementById("staffSummaryList");
+  box.innerHTML = `<div class="empty">載入中...</div>`;
+  try {
+    const res = await apiGet({ action: "getAllQueues" });
+    if (!res.success || !res.data || !res.data.length) {
+      box.innerHTML = `<div class="empty">目前全場無待播歌曲</div>`;
+      return;
     }
+    box.innerHTML = res.data.map(item => `
+      <div class="customer-card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="color:#f59e0b;font-weight:bold;font-size:0.9rem;">桌號：${escapeHtml(item.table_no)}</div>
+          <div class="customer-card-name">[${escapeHtml(item.song_no)}] ${escapeHtml(item.title)}</div>
+          <div class="customer-card-info">${escapeHtml(item.artist)}</div>
+        </div>
+        <button class="add-btn" onclick="staffAddQueue('${escapeJs(item.song_no)}', '${escapeJs(item.title)}', '${escapeJs(item.artist)}')">＋ 加入播放</button>
+      </div>
+    `).join("");
+  } catch (e) {
+    box.innerHTML = `<div class="empty">載入總表失敗</div>`;
+  }
+}
 
-    function openManagerQueueModal() {
-      document.getElementById("managerQueueModal").classList.add("show");
-      document.getElementById("managerPasswordInput").value = "";
-      document.getElementById("managerLoginArea").style.display = "block";
-      document.getElementById("managerContentArea").style.display = "none";
-      setTimeout(() => document.getElementById("managerPasswordInput").focus(), 100);
-    }
+async function staffAddQueue(songNo, title, artist) {
+  queue.push({ song_no: songNo, title, artist, queueId: Date.now() + Math.random(), table_no: "點歌員新增" });
+  saveQueue();
+  renderQueue();
+  showToast(`已由總表加入：${title}`);
+  await syncQueueToServer();
+}
 
-    function closeManagerQueueModal() {
-      document.getElementById("managerQueueModal").classList.remove("show");
-    }
-
-    function verifyManagerPassword() {
-      const pwd = document.getElementById("managerPasswordInput").value;
-      if (pwd === MANAGER_PASSWORD) {
-        document.getElementById("managerLoginArea").style.display = "none";
-        document.getElementById("managerContentArea").style.display = "block";
-        loadManagerQueue();
-      } else {
-        showToast("❌ 密碼錯誤");
-      }
-    }
-
-    async function loadManagerQueue() {
-      const listEl = document.getElementById("managerQueueList");
-      const countEl = document.getElementById("managerQueueCount");
-      listEl.innerHTML = `<div class="empty">正在從伺服器彙整所有桌號歌單...</div>`;
-
-      try {
-        const res = await fetch(API_URL + "?action=getQueue");
-        const data = await res.json();
-        const allQueues = data.success && Array.isArray(data.queue) ? data.queue : queue;
-
-        countEl.textContent = `總計 ${allQueues.length} 首待播`;
-
-        if (allQueues.length === 0) {
-          listEl.innerHTML = `<div class="empty">目前沒有任何待播歌曲</div>`;
-          return;
-        }
-
-        listEl.innerHTML = allQueues.map((song, index) => `
-          <div class="song" style="margin-bottom: 8px;">
-            <div class="song-info">
-              <div class="song-title">
-                <span style="color:#ff2bd6; margin-right: 6px;">[${escapeHtml(song.tableNo || "散客")}]</span>
-                [${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}
-              </div>
-              <div class="artist">歌手：${escapeHtml(song.artist)} · 點歌人：${escapeHtml(song.customerName || "未知")}</div>
-            </div>
-            <div>
-              <button class="add-btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="managerRemoveSong(${song.queueId})">移除</button>
-            </div>
-          </div>
-        `).join("");
-      } catch (e) {
-        listEl.innerHTML = `<div class="empty">無法取得伺服器彙整歌單</div>`;
-      }
-    }
-
-    async function managerRemoveSong(queueId) {
-      queue = queue.filter(item => item.queueId !== queueId);
-      saveQueueToLocal();
-      renderQueue();
-      loadManagerQueue();
-      showToast("已從總清單移除");
-
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify({ action: "updateQueue", queue })
-        });
-      } catch (e) {}
-    }
-
-    function escapeHtml(str) {
-      return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    }
-
-    function escapeJs(str) {
-      return String(str || "").replace(/'/g, "\\'").replace(/"/g, '\\"');
-    }
-  </script>
+function openCustomerModal() { document.getElementById("customerModal").classList.add("show"); }
+function closeCustomerModal() { document.getElementById("customerModal").classList.remove("show"); }
+function updateCustomerUI() {
+  const info = document.getElementById("customerInfo");
+  if (!currentCustomer) { info.textContent = "尚未選擇客戶"; return; }
+  info.innerHTML = `目前客戶：<span class="customer-name">${escapeHtml(currentCustomer.name)}</span>`;
+}
+function toggleFavorite(songNo) {
+  if (favorites.includes(songNo)) favorites = favorites.filter(id => id !== songNo);
+  else favorites.push(songNo);
+  localStorage.setItem("ktvFavorites", JSON.stringify(favorites));
+  renderSongList();
+}
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+function escapeHtml(str) {
+  return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function escapeJs(str) {
+  return String(str || "").replace(/'/g, "\\'");
+}
+</script>
 </body>
 </html>
