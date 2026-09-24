@@ -920,14 +920,50 @@ function renderSongList() {
 }
 
 async function addSong(songNo) {
+  // 💡 新增防呆：檢查桌號是否為空
+  const tableInput = document.getElementById("tableNoInput");
+  const tableVal = tableInput ? tableInput.value.trim() : "";
+  if (!tableVal) {
+    showToast("⚠️ 請先輸入您的桌號才能點歌！");
+    if (tableInput) tableInput.focus();
+    return;
+  }
+
   const song = allSongs.find(s => String(s.song_no) === String(songNo));
   if (!song) return;
 
-  const newItem = { ...song, queueId: Date.now() + Math.random(), table_no: currentTableNo || "散客" };
+  const newItem = { ...song, queueId: Date.now() + Math.random(), table_no: currentTableNo };
   queue.push(newItem);
   saveQueue();
   renderQueue();
   showToast(`已點歌：${song.title}`);
+  await syncQueueToServer();
+}
+
+async function addHistorySong(songNo, title, artist, brand, language) {
+  // 💡 新增防呆：檢查桌號是否為空
+  const tableInput = document.getElementById("tableNoInput");
+  const tableVal = tableInput ? tableInput.value.trim() : "";
+  if (!tableVal) {
+    showToast("⚠️ 請先輸入您的桌號才能點歌！");
+    closeHistoryModal(); // 關閉歷史歌單視窗方便使用者填寫桌號
+    if (tableInput) tableInput.focus();
+    return;
+  }
+
+  const newItem = {
+    song_no: songNo,
+    title: title,
+    artist: artist,
+    brand: brand,
+    language: language,
+    queueId: Date.now() + Math.random(),
+    table_no: currentTableNo
+  };
+  queue.push(newItem);
+  saveQueue();
+  renderQueue();
+  showToast(`已從歷史歌單點歌：${title}`);
   await syncQueueToServer();
 }
 
