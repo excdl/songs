@@ -109,6 +109,7 @@ header {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 .customer-info {
   color: #bbb;
@@ -129,6 +130,16 @@ header {
 }
 .customer-btn:hover {
   background: #3b3b50;
+}
+.table-tag {
+  background: linear-gradient(135deg, #22d3ee, #744cff);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
 }
 main {
   max-width: 1400px;
@@ -275,6 +286,17 @@ main {
   color: #999;
   font-size: 0.85rem;
   margin-top: 4px;
+}
+.queue-table-badge {
+  display: inline-block;
+  background: #22d3ee;
+  color: #0b0b16;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 6px;
+  vertical-align: middle;
 }
 .song-actions {
   display: flex;
@@ -603,18 +625,15 @@ audio {
 /* =========================================================
  * 📱 平板與手機響應式優化 (Responsive Styles)
  * ========================================================= */
-
-/* 防止手機端輸入框聚焦時自動放大 (字體需 >= 16px) */
 @media (max-width: 768px) {
   html {
-    font-size: 100%; /* 微調基本字型讓排版在小螢幕更舒適 */
+    font-size: 100%;
   }
 
   body {
     -webkit-text-size-adjust: 100%;
   }
 
-  /* 頂端導覽列調整 */
   header {
     height: 65px;
     padding: 0 15px;
@@ -629,7 +648,6 @@ audio {
     font-size: 0.8rem;
   }
 
-  /* 主內容區塊改為單欄，取消間距過大 */
   main {
     padding: 15px;
   }
@@ -639,7 +657,6 @@ audio {
     gap: 15px;
   }
 
-  /* 搜尋列與排序區塊調整 */
   .search-area {
     gap: 8px;
   }
@@ -647,10 +664,9 @@ audio {
   .search-box input, 
   .sort-box select {
     height: 46px;
-    font-size: 1rem; /* 保持 16px 等級防縮放 */
+    font-size: 1rem;
   }
 
-  /* 快速搜尋分類標籤支援橫向滑動，避免擠壓 */
   .quick-search {
     padding: 12px;
   }
@@ -664,7 +680,7 @@ audio {
   }
 
   .quick-row::-webkit-scrollbar {
-    display: none; /* 隱藏捲軸保持簡潔 */
+    display: none;
   }
 
   .category {
@@ -673,7 +689,6 @@ audio {
     font-size: 0.82rem;
   }
 
-  /* 歌曲項目調整，增加觸控友善度 */
   .song {
     padding: 10px;
     gap: 10px;
@@ -703,17 +718,15 @@ audio {
     height: 36px;
   }
 
-  /* 待播清單與播放器面板 */
   .queue-panel {
     position: static;
     padding: 15px;
   }
 
   .queue-list {
-    max-height: 280px; /* 手機上縮減待播清單高度，避免佔滿畫面 */
+    max-height: 280px;
   }
 
-  /* 彈跳視窗滿版或貼邊優化 */
   .modal-box {
     max-width: 100%;
     max-height: 95vh;
@@ -727,7 +740,6 @@ audio {
   }
 }
 
-/* 針對極小螢幕手機 (如 iPhone SE 等) 的微調 */
 @media (max-width: 480px) {
   header {
     padding: 0 10px;
@@ -738,10 +750,9 @@ audio {
   }
 
   .customer-info {
-    display: none; /* 隱藏冗長文字，保留按鈕 */
+    display: none;
   }
 }
-
 </style>
 </head>
 <body>
@@ -760,8 +771,9 @@ audio {
 <header>
   <div class="logo">🎤 KTV 點歌系統</div>
   <div class="customer-area">
+    <button class="table-tag" id="tableTagBtn" onclick="openTableModal()">📍 桌號：未設定</button>
     <div class="customer-info" id="customerInfo">尚未選擇客戶</div>
-    <button class="customer-btn" onclick="openCustomerModal()">👤 新增／選擇客戶</button>
+    <button class="customer-btn" onclick="openCustomerModal()">👤 選擇客戶</button>
     <button class="customer-btn" id="clearCustomerBtn" style="display:none" onclick="clearCustomer()">清除</button>
   </div>
 </header>
@@ -817,6 +829,19 @@ audio {
     </aside>
   </div>
 </main>
+
+<!-- 桌號設定 Modal -->
+<div class="modal" id="tableModal">
+  <div class="modal-box" style="max-width: 360px; text-align: center;">
+    <div class="modal-header">
+      <div class="modal-title">📍 設定您的桌號</div>
+      <button class="close-btn" onclick="closeTableModal()">×</button>
+    </div>
+    <div style="color: #aaa; font-size: 0.85rem; margin-bottom: 15px;">請輸入目前所在的桌號（例如：A01、包廂2）</div>
+    <input class="modal-input" id="tableInput" placeholder="輸入桌號..." style="text-align: center; font-size: 1.2rem;" autocomplete="off">
+    <button class="primary-btn" onclick="saveTableNo()">確認桌號</button>
+  </div>
+</div>
 
 <div class="modal" id="customerModal">
   <div class="modal-box">
@@ -874,6 +899,7 @@ let allSongs = [];
 let currentLanguage = "全部";
 let currentCategory = "全部";
 let currentCustomer = null;
+let currentTable = ""; // 📍 新增桌號變數
 let queue = [];
 let favorites = [];
 let currentSong = null;
@@ -916,6 +942,16 @@ function loadLocalStorage() {
     localStorage.removeItem("currentCustomer");
     currentCustomer = null;
   }
+
+  // 📍 讀取儲存的桌號
+  try {
+    const savedTable = localStorage.getItem("currentTable");
+    if (savedTable) {
+      currentTable = savedTable;
+    }
+  } catch (error) {
+    console.error("讀取 currentTable 失敗", error);
+  }
 }
 
 /* =========================================================
@@ -923,8 +959,62 @@ function loadLocalStorage() {
  * ========================================================= */
 window.addEventListener("DOMContentLoaded", function () {
   loadLocalStorage();
+  updateTableUI();
+  
+  // 檢查網址列是否自動帶入桌號（例如：index.html?table=A05）
+  const urlParams = new URLSearchParams(window.location.search);
+  const tableParam = urlParams.get("table");
+  if (tableParam) {
+    currentTable = tableParam.trim();
+    localStorage.setItem("currentTable", currentTable);
+    updateTableUI();
+  } else if (!currentTable) {
+    // 若沒有設定過桌號，初次進入自動跳出設定視窗
+    setTimeout(() => openTableModal(), 500);
+  }
+
   checkLocationAuth();
 });
+
+/* =========================================================
+ * 桌號 Modal 與 UI 互動
+ * ========================================================= */
+function openTableModal() {
+  const modal = document.getElementById("tableModal");
+  const input = document.getElementById("tableInput");
+  if (modal && input) {
+    input.value = currentTable;
+    modal.classList.add("show");
+    setTimeout(() => input.focus(), 100);
+  }
+}
+
+function closeTableModal() {
+  const modal = document.getElementById("tableModal");
+  if (modal) modal.classList.remove("show");
+}
+
+function saveTableNo() {
+  const input = document.getElementById("tableInput");
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) {
+    showToast("請輸入有效桌號");
+    return;
+  }
+  currentTable = val;
+  localStorage.setItem("currentTable", currentTable);
+  updateTableUI();
+  closeTableModal();
+  showToast(`已設定桌號：${currentTable}`);
+}
+
+function updateTableUI() {
+  const btn = document.getElementById("tableTagBtn");
+  if (btn) {
+    btn.textContent = currentTable ? `📍 桌號：${currentTable}` : "📍 桌號：未設定";
+  }
+}
 
 /* =========================================================
  * 據點安全驗證 (IP OR GPS)
@@ -1095,7 +1185,7 @@ function initKtvSystem() {
   updateCustomerUI();
   loadLanguages();
   loadCategories();
-  startQueueSync(); // 啟動多人點歌自動同步
+  startQueueSync();
 
   const audioPlayer = document.getElementById("audioPlayer");
   if (audioPlayer) audioPlayer.volume = 0.8;
@@ -1108,7 +1198,6 @@ function initKtvSystem() {
       lastKeyword = keyword;
 
       searchTimer = setTimeout(function () {
-        // 確保輸入中不會因為閃退而被清空
         fetchSongs(keyword);
       }, 200);
     });
@@ -1151,12 +1240,10 @@ function initKtvSystem() {
  * ========================================================= */
 function startQueueSync() {
   if (syncInterval) clearInterval(syncInterval);
-  // 每 3 秒背景同步一次待播清單與當前客戶狀態
   syncInterval = setInterval(async () => {
     try {
       const result = await apiGet({ action: "getQueue" });
       if (result && result.success && Array.isArray(result.queue)) {
-        // 若遠端資料與本地不一致，進行靜默同步更新
         if (JSON.stringify(result.queue) !== JSON.stringify(queue)) {
           queue = result.queue;
           saveQueue();
@@ -1164,7 +1251,7 @@ function startQueueSync() {
         }
       }
     } catch (e) {
-      // 網路暫時中斷時忽略，避免干擾使用者
+      // 網路暫時中斷時忽略
     }
   }, 3000);
 }
@@ -1190,10 +1277,9 @@ async function apiPost(data) {
 }
 
 /* =========================================================
- * 語言與分類載入（改為指定保留：粵語、日文、越語）
+ * 語言與分類載入
  * ========================================================= */
 async function loadLanguages() {
-  // 指定保留的語言清單
   const allowedLangs = ["粵語", "日文", "越語"];
   const container = document.getElementById("languageContainer");
   if (!container) return;
@@ -1238,13 +1324,12 @@ function filterCategory(category, button) {
 }
 
 /* =========================================================
- * 歌曲搜尋（修復閃退與無結果問題）
+ * 歌曲搜尋
  * ========================================================= */
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
   if (!list) return;
 
-  // 若尚未輸入關鍵字且沒有選擇特定語言，顯示提示
   if (!keyword && currentLanguage === "全部" && currentCategory === "全部") {
     allSongs = [];
     list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>`;
@@ -1257,7 +1342,6 @@ async function fetchSongs(keyword = "") {
     const result = await apiGet({ action: "songs", q: keyword, language: currentLanguage, category: currentCategory });
     if (!result.success) throw new Error(result.message || "歌曲搜尋失敗");
 
-    // 確保輸入框在載入期間被修改時，若使用者還在打字，不被舊的回應覆蓋
     const currentInputVal = document.getElementById("searchInput").value.trim();
     if (currentInputVal !== keyword && keyword !== "") return;
 
@@ -1321,22 +1405,33 @@ function renderSongList() {
 }
 
 /* =========================================================
- * 加入歌曲與待播清單
+ * 加入歌曲與待播清單 (附帶桌號)
  * ========================================================= */
 async function addSong(songNo) {
+  if (!currentTable) {
+    showToast("請先設定桌號！");
+    openTableModal();
+    return;
+  }
+
   const song = allSongs.find(item => String(item.song_no) === String(songNo));
   if (!song) {
     showToast("找不到歌曲");
     return;
   }
 
-  const newQueueItem = { ...song, queueId: Date.now() + Math.random() };
+  // 📍 將目前的桌號紀錄寫入點播項目中
+  const newQueueItem = { 
+    ...song, 
+    table_no: currentTable, 
+    queueId: Date.now() + Math.random() 
+  };
+  
   queue.push(newQueueItem);
   saveQueue();
   renderQueue();
-  showToast(`已點歌：${song.title}`);
+  showToast(`已從【${currentTable}】點歌：${song.title}`);
 
-  // 同步至後端，供其他多人端即時拿到更新
   try {
     await apiPost({ action: "updateQueue", queue });
   } catch (e) {
@@ -1362,7 +1457,10 @@ function renderQueue() {
         <div class="queue-number" style="font-weight:bold;min-width:24px;text-align:center;">${index + 1}</div>
         <div class="cover">🎤</div>
         <div class="song-info" style="min-width:0;flex:1;">
-          <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
+          <div class="song-title">
+            ${song.table_no ? `<span class="queue-table-badge">${escapeHtml(song.table_no)}</span>` : ""}
+            [${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}
+          </div>
           <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
             ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
             ${song.brand ? " · " + escapeHtml(song.brand) : ""}
@@ -1406,7 +1504,10 @@ function playCurrent() {
 
   const media = currentSong.media || `music/${encodeURIComponent(currentSong.title)}.mp3`;
   player.src = media;
-  document.getElementById("currentTitle").textContent = `[${currentSong.song_no}] ${currentSong.title}`;
+  
+  // 播放器面板同步顯示點歌桌號
+  const tableText = currentSong.table_no ? `【${currentSong.table_no}】` : "";
+  document.getElementById("currentTitle").textContent = `${tableText} [${currentSong.song_no}] ${currentSong.title}`;
   document.getElementById("currentArtist").textContent = currentSong.artist || "-";
 
   player.play().catch(error => {
@@ -1692,7 +1793,21 @@ function closeHistoryModal() {
 }
 
 async function addHistorySong(songNo, title, artist, brand, language) {
-  queue.push({ song_no: songNo, title, artist, brand, language, queueId: Date.now() + Math.random() });
+  if (!currentTable) {
+    showToast("請先設定桌號！");
+    openTableModal();
+    return;
+  }
+
+  queue.push({ 
+    song_no: songNo, 
+    title, 
+    artist, 
+    brand, 
+    language, 
+    table_no: currentTable,
+    queueId: Date.now() + Math.random() 
+  });
   saveQueue();
   renderQueue();
   showToast(`已加入：${title}`);
@@ -1717,7 +1832,7 @@ async function endService() {
 
   try {
     const result = await apiPost({ action: "saveHistory", customer_id: currentCustomer.customer_id, customer_name: currentCustomer.name, songs: queue });
-    if (!result.success) throw new Error(result.message);
+    if (!result.success) throw new Error(result.name || result.message);
 
     queue = [];
     currentSong = null;
