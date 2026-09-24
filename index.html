@@ -741,18 +741,18 @@ audio {
   </div>
 </main>
 
-<!-- 📋 全場點歌總表 Modal (純前端管理) -->
+<!-- 📋 全場點歌總表 Modal (結合後端密碼驗證與雲端儲存) -->
 <div class="modal" id="allQueuesModal">
   <div class="modal-box" style="max-width: 700px;">
     <div class="modal-header">
       <div class="modal-title">📋 全場各桌點歌總表</div>
       <button class="close-btn" onclick="closeAllQueuesModal()">×</button>
     </div>
-    <div style="color: #aaa; font-size: 0.85rem; margin-bottom: 12px;">此處顯示目前本裝置已記錄的所有桌次待播清單。</div>
+    <div style="color: #aaa; font-size: 0.85rem; margin-bottom: 12px;">輸入密碼後可檢視及管理全場各桌的待播清單。</div>
     <div class="history-list" id="allQueuesList" style="max-height: 60vh; overflow-y: auto;">
-      <div class="empty">載入中...</div>
+      <div class="empty">請先驗證管理員密碼</div>
     </div>
-    <button class="secondary-btn" onclick="loadAllQueues()" style="margin-top: 15px;">🔄 重新整理總表</button>
+    <button class="secondary-btn" onclick="loadAllQueuesFromCloud()" style="margin-top: 15px;">🔄 重新整理總表</button>
   </div>
 </div>
 
@@ -799,24 +799,10 @@ audio {
   </div>
 </div>
 
-<div class="modal" id="historyModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title">📜 歷史歌單</div>
-      <button class="close-btn" onclick="closeHistoryModal()">×</button>
-    </div>
-    <div id="historyCustomerName" style="color:#aaa;margin-bottom:10px;font-size:0.9rem;"></div>
-    <div class="history-list" id="historyList">
-      <div class="empty">載入中...</div>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-
-const API_URL = "https://script.google.com/macros/s/AKfycbzvrErpJreSzD8rZXSXpYZgzTsHB5dnPv3JLKHE00YlIOUShTe-pEj7L0gJqQCKZaYy/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby0rynkkwjCxGTm-og7-xmETgnuiNgBlo2Mjl4hOHM13Hs0rN0vL1oNzPKelnc4c04j/exec";
 
 /* =========================================================
  * 全域狀態
@@ -835,6 +821,10 @@ let lastKeyword = "";
 let editingCustomerId = null;
 let ktvInitialized = false;
 let authChecking = false;
+
+// 管理員遠端總表使用之密碼快取
+let verifiedAdminPassword = "";
+let cloudGlobalQueue = [];
 
 /* =========================================================
  * localStorage 安全讀取
@@ -939,63 +929,113 @@ function updateTableUI() {
 }
 
 /* =========================================================
- * 📋 全場點歌總表 Modal (純前端 localStorage 實作)
+ * 📋 全場點歌總表 Modal (結合密碼驗證與 Google 雲端同步)
  * ========================================================= */
-function openAllQueuesModal() {
+async function openAllQueuesModal() {
   document.getElementById("allQueuesModal").classList.add("show");
-  loadAllQueues();
+  
+  if (!verifiedAdminPassword) {
+    const password = prompt("請輸入管理員密碼以查看全場點歌總表：");
+    if (!password) {
+      closeAllQueuesModal();
+      return;
+    }
+    
+    // 驗證密碼
+    try {
+      const res = await apiPost({ action: "verifyPassword", password: password });
+      if (res.success) {
+        verifiedAdminPassword = password;
+        showToast("密碼驗證成功！");
+      } else {
+        alert("密碼錯誤！");
+        closeAllQueuesModal();
+        return;
+      }
+    } catch (err) {
+      alert("密碼驗證連線失敗");
+      closeAllQueuesModal();
+      return;
+    }
+  }
+
+  loadAllQueuesFromCloud();
 }
 
 function closeAllQueuesModal() {
   document.getElementById("allQueuesModal").classList.remove("show");
 }
 
-function loadAllQueues() {
+async function loadAllQueuesFromCloud() {
   const listEl = document.getElementById("allQueuesList");
   if (!listEl) return;
-  
+  listEl.innerHTML = `<div class="empty">載入雲端總表中...</div>`;
+
   try {
-    // 讀取目前本機儲存的所有待播歌曲
-    const allQ = queue; 
-    if (!Array.isArray(allQ) || allQ.length === 0) {
-      listEl.innerHTML = `<div class="empty">目前沒有任何待播歌曲</div>`;
+    const res = await fetch(`${API_URL}?action=getQueue&password=${encodeURIComponent(verifiedAdminPassword)}`, { method: "GET", cache: "no-store" });
+    const result = await res.json();
+
+    if (!result.success) {
+      listEl.innerHTML = `<div class="empty">${escapeHtml(result.message || "載入失敗")}</div>`;
+      if (result.message && result.message.includes("密碼")) verifiedAdminPassword = "";
       return;
     }
 
-    listEl.innerHTML = allQ.map((song, index) => `
-      <div class="song" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-          <div class="queue-number">${index + 1}</div>
-          <div class="cover" style="width:42px;height:42px;font-size:1rem;">🎤</div>
-          <div class="song-info" style="min-width:0;flex:1;">
-            <div class="song-title">
-              ${song.table_no ? `<span class="queue-table-badge">${escapeHtml(song.table_no)}</span>` : `<span class="queue-table-badge" style="background:#ff4d6d">未標示桌號</span>`}
-              [${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}
-            </div>
-            <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
-            </div>
-          </div>
-        </div>
-        <div class="song-actions" style="margin-left:10px;">
-          <button class="remove-btn" onclick="staffRemoveSong(${song.queueId})" style="background:#ff4d6d;color:white;padding:6px 12px;font-size:0.85rem;border-radius:8px;width:auto;">刪除</button>
-        </div>
-      </div>
-    `).join("");
+    cloudGlobalQueue = Array.isArray(result.queue) ? result.queue : [];
+    renderCloudQueueList();
   } catch (e) {
     console.error("載入全場總表失敗", e);
-    listEl.innerHTML = `<div class="empty">載入資料失敗</div>`;
+    listEl.innerHTML = `<div class="empty">載入資料失敗，請確認網路連線</div>`;
   }
 }
 
-function staffRemoveSong(queueId) {
-  if (!confirm("確定要從待播清單中移除這首歌曲嗎？")) return;
+function renderCloudQueueList() {
+  const listEl = document.getElementById("allQueuesList");
+  if (!listEl) return;
 
-  queue = queue.filter(song => Number(song.queueId) !== Number(queueId));
-  saveQueue();
-  renderQueue();
-  showToast("已從清單中移除歌曲");
-  loadAllQueues();
+  if (cloudGlobalQueue.length === 0) {
+    listEl.innerHTML = `<div class="empty">目前雲端沒有任何全場待播歌曲</div>`;
+    return;
+  }
+
+  listEl.innerHTML = cloudGlobalQueue.map((song, index) => `
+    <div class="song" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <div class="queue-number">${index + 1}</div>
+        <div class="cover" style="width:42px;height:42px;font-size:1rem;">🎤</div>
+        <div class="song-info" style="min-width:0;flex:1;">
+          <div class="song-title">
+            ${song.table_no ? `<span class="queue-table-badge">${escapeHtml(song.table_no)}</span>` : `<span class="queue-table-badge" style="background:#ff4d6d">未標示桌號</span>`}
+            [${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}
+          </div>
+          <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
+          </div>
+        </div>
+      </div>
+      <div class="song-actions" style="margin-left:10px;">
+        <button class="remove-btn" onclick="staffRemoveCloudSong(${index})" style="background:#ff4d6d;color:white;padding:6px 12px;font-size:0.85rem;border-radius:8px;width:auto;">刪除</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function staffRemoveCloudSong(index) {
+  if (!confirm("確定要從雲端待播清單中移除這首歌曲嗎？")) return;
+
+  cloudGlobalQueue.splice(index, 1);
+
+  try {
+    const res = await apiPost({ action: "updateQueue", password: verifiedAdminPassword, queue: cloudGlobalQueue });
+    if (res.success) {
+      showToast("已從雲端清單中移除");
+      renderCloudQueueList();
+    } else {
+      showToast(res.message || "更新雲端失敗");
+    }
+  } catch (err) {
+    showToast("連線雲端失敗");
+  }
 }
 
 /* =========================================================
@@ -1577,19 +1617,6 @@ async function updateCustomer() {
   }
 }
 
-async function openHistory() {
-  if (!currentCustomer) {
-    showToast("請先選擇客戶");
-    return;
-  }
-  document.getElementById("historyModal").classList.add("show");
-  document.getElementById("historyCustomerName").textContent = `客戶：${currentCustomer.name}`;
-}
-
-function closeHistoryModal() {
-  document.getElementById("historyModal").classList.remove("show");
-}
-
 async function endService() {
   if (!currentCustomer) {
     showToast("請先選擇客戶");
@@ -1627,36 +1654,11 @@ function showToast(message) {
 }
 
 function escapeHtml(value) {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(./g, "&#039;");
 }
 
 function escapeJs(value) {
   return String(value ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\r/g, "\\r").replace(/\n/g, "\\n");
-}
-// 範例前端點擊「全場點歌總表」時的驗證邏輯
-async function openGlobalQueue() {
-  const password = prompt("請輸入管理員密碼以查看全場點歌總表：");
-  if (!password) return;
-
-  // 1. 驗證密碼
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({ action: "verifyPassword", password: password })
-  });
-  const result = await res.json();
-
-  if (result.success) {
-    // 2. 密碼正確，取得全場待播清單
-    const queueRes = await fetch(`${API_URL}?action=getQueue&password=${password}`);
-    const queueData = await queueRes.json();
-    
-    if (queueData.success) {
-      // 顯示您的全場點歌總表 Modal / 畫面
-      showQueueModal(queueData.queue);
-    }
-  } else {
-    alert("密碼錯誤！");
-  }
 }
 </script>
 </body>
