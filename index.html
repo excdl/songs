@@ -619,6 +619,8 @@ audio { width: 100%; margin-top: 10px; }
       <input class="modal-input" id="newCustomerNote" placeholder="備註（選填）">
       <button class="primary-btn" onclick="createCustomer()">建立客戶</button>
     </div>
+    
+    <!-- ✏️ 編輯舊客戶區域 -->
     <div id="editCustomerArea" class="edit-customer-area">
       <div class="edit-title">✏️ 編輯舊客戶</div>
       <div class="edit-customer-id" id="editCustomerId"></div>
@@ -688,6 +690,7 @@ let customerSearchTimer = null;
 let ktvInitialized = false;
 let authChecking = false;
 let syncInterval = null;
+let editingCustomerId = null; // 用於追蹤目前正在編輯的客戶 ID
 
 function loadLocalStorage() {
   try {
@@ -920,7 +923,6 @@ function renderSongList() {
 }
 
 async function addSong(songNo) {
-  // 💡 新增防呆：檢查桌號是否為空
   const tableInput = document.getElementById("tableNoInput");
   const tableVal = tableInput ? tableInput.value.trim() : "";
   if (!tableVal) {
@@ -941,12 +943,11 @@ async function addSong(songNo) {
 }
 
 async function addHistorySong(songNo, title, artist, brand, language) {
-  // 💡 新增防呆：檢查桌號是否為空
   const tableInput = document.getElementById("tableNoInput");
   const tableVal = tableInput ? tableInput.value.trim() : "";
   if (!tableVal) {
     showToast("⚠️ 請先輸入您的桌號才能點歌！");
-    closeHistoryModal(); // 關閉歷史歌單視窗方便使用者填寫桌號
+    closeHistoryModal();
     if (tableInput) tableInput.focus();
     return;
   }
@@ -959,23 +960,6 @@ async function addHistorySong(songNo, title, artist, brand, language) {
     language: language,
     queueId: Date.now() + Math.random(),
     table_no: currentTableNo
-  };
-  queue.push(newItem);
-  saveQueue();
-  renderQueue();
-  showToast(`已從歷史歌單點歌：${title}`);
-  await syncQueueToServer();
-}
-
-async function addHistorySong(songNo, title, artist, brand, language) {
-  const newItem = {
-    song_no: songNo,
-    title: title,
-    artist: artist,
-    brand: brand,
-    language: language,
-    queueId: Date.now() + Math.random(),
-    table_no: currentTableNo || "散客"
   };
   queue.push(newItem);
   saveQueue();
@@ -1166,7 +1150,7 @@ async function staffRemoveQueue(tableNo, songNo) {
     const res = await apiPost({ action: "removeTableQueueSong", table_no: tableNo, song_no: songNo });
     if (res.success) {
       showToast("已成功刪除該首歌曲");
-      loadStaffSummary(); // 重新整理總表
+      loadStaffSummary();
     } else {
       showToast(res.message || "刪除失敗");
     }
@@ -1193,8 +1177,98 @@ async function staffAddQueue(songNo, title, artist, brand, language, category, m
   await syncQueueToServer();
 }
 
-function openCustomerModal() { document.getElementById("customerModal").classList.add("show"); }
-function closeCustomerModal() { document.getElementById("customerModal").classList.remove("show"); }
+/* =========================================================
+ * 客戶 Modal 與管理 (已整合最新搜尋與編輯機制)
+ * ========================================================= */
+function openCustomerModal() {
+  document.getElementById("customerModal").classList.add("show");
+  document.getElementById("customerSearch").value = "";
+  document.getElementById("customerResults").innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
+  document.getElementById("createCustomerArea").style.display = "none";
+  cancelEditCustomer();
+
+  setTimeout(() => document.getElementById("customerSearch").focus(), 100);
+}
+
+function closeCustomerModal() {
+  document.getElementById("customerModal").classList.remove("show");
+}
+
+async function searchCustomers(keyword) {
+  const resultBox = document.getElementById("customerResults");
+  if (!resultBox) return;
+
+  resultBox.innerHTML = `<div class="empty">搜尋中...</div>`;
+
+  try {
+    const result = await apiGet({ action: "customers", q: keyword });
+    if (!result.success) throw new Error(result.message);
+
+    if (!result.data || result.data.length === 0) {
+      resultBox.innerHTML = `<div class="empty">找不到「${escapeHtml(keyword)}」<br><br>可以按下方「新增客戶」</div>`;
+      return;
+    }
+
+    resultBox.innerHTML = result.data.map(customer => `
+      <div class="customer-card">
+        <div style="min-width:0">
+          <div class="customer-card-name">${escapeHtml(customer.name)}</div>
+          <div class="customer-card-info">${customer.phone ? escapeHtml(customer.phone) : "未提供電話"} ${customer.note ? " • " + escapeHtml(customer.note) : ""}</div>
+        </div>
+        <div class="customer-actions">
+          <button class="edit-customer" onclick="showEditCustomer('${escapeJs(customer.customer_id)}', '${escapeJs(customer.name)}', '${escapeJs(customer.phone || '')}', '${escapeJs(customer.note || '')}')">✏️ 編輯</button>
+          <button class="select-customer" onclick="selectCustomer('${escapeJs(customer.customer_id)}', '${escapeJs(customer.name)}')">選擇</button>
+        </div>
+      </div>
+    `).join("");
+  } catch (error) {
+    console.error(error);
+    resultBox.innerHTML = `<div class="empty">客戶搜尋失敗</div>`;
+  }
+}
+
+function showEditCustomer(id, name, phone, note) {
+  editingCustomerId = id;
+  document.getElementById("editCustomerId").textContent = `編號：${id}`;
+  document.getElementById("editCustomerName").value = name;
+  document.getElementById("editCustomerPhone").value = (phone === "null" || phone === "undefined") ? "" : phone;
+  document.getElementById("editCustomerNote").value = (note === "null" || note === "undefined") ? "" : note;
+  
+  document.getElementById("editCustomerArea").style.display = "block";
+  document.getElementById("createCustomerArea").style.display = "none";
+}
+
+function cancelEditCustomer() {
+  editingCustomerId = null;
+  const editArea = document.getElementById("editCustomerArea");
+  if (editArea) editArea.style.display = "none";
+}
+
+async function updateCustomer() {
+  if (!editingCustomerId) return;
+  const name = document.getElementById("editCustomerName").value.trim();
+  const phone = document.getElementById("editCustomerPhone").value.trim();
+  const note = document.getElementById("editCustomerNote").value.trim();
+
+  if (!name) {
+    showToast("客戶姓名不能為空");
+    return;
+  }
+
+  try {
+    const res = await apiPost({ action: "updateCustomer", customer_id: editingCustomerId, name, phone, note });
+    if (res.success) {
+      showToast("更新客戶成功！");
+      cancelEditCustomer();
+      const kw = document.getElementById("customerSearch").value.trim();
+      searchCustomers(kw);
+    } else {
+      showToast(res.message || "更新失敗");
+    }
+  } catch (e) {
+    showToast("更新客戶發生錯誤");
+  }
+}
 
 function updateCustomerUI() {
   const info = document.getElementById("customerInfo");
@@ -1219,31 +1293,6 @@ function clearCustomer() {
   showToast("已清除目前客戶");
 }
 
-async function searchCustomers(keyword) {
-  const resultsDiv = document.getElementById("customerResults");
-  resultsDiv.innerHTML = `<div class="empty">搜尋客戶中...</div>`;
-  try {
-    const res = await apiGet({ action: "searchCustomers", q: keyword });
-    if (!res.success || !res.data || res.data.length === 0) {
-      resultsDiv.innerHTML = `<div class="empty">找不到相關客戶</div>`;
-      return;
-    }
-    resultsDiv.innerHTML = res.data.map(c => `
-      <div class="customer-card">
-        <div>
-          <div class="customer-card-name">${escapeHtml(c.name)}</div>
-          <div class="customer-card-info">電話：${escapeHtml(c.phone || "無")} | 備註：${escapeHtml(c.note || "無")}</div>
-        </div>
-        <div class="customer-actions">
-          <button class="select-customer" onclick="selectCustomer('${escapeJs(c.customer_id)}', '${escapeJs(c.name)}')">選擇</button>
-        </div>
-      </div>
-    `).join("");
-  } catch (e) {
-    resultsDiv.innerHTML = `<div class="empty">搜尋客戶失敗</div>`;
-  }
-}
-
 function selectCustomer(id, name) {
   currentCustomer = { customer_id: id, name: name };
   localStorage.setItem("currentCustomer", JSON.stringify(currentCustomer));
@@ -1255,6 +1304,7 @@ function selectCustomer(id, name) {
 function showCreateCustomer() {
   const area = document.getElementById("createCustomerArea");
   area.style.display = area.style.display === "none" ? "block" : "none";
+  document.getElementById("editCustomerArea").style.display = "none";
 }
 
 async function createCustomer() {
@@ -1318,7 +1368,6 @@ async function endService() {
     renderQueue();
     updateCustomerUI();
     
-    // 💡 新增：強制向後端同步清除該桌次/散客的佇列
     await syncQueueToServer();
     showToast("已結束本次服務");
   }
