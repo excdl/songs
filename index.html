@@ -673,7 +673,7 @@ audio { width: 100%; margin-top: 10px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwuj5E2BGA5zsLvBd3RyS2S21d40UqJiopmY1JOieeWIKLNL-AmaWOMIoojvxF3yHL-/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwy__qq_dz6RdHi-4Zt-onigCS66CRgtKhxxnCgoytASiHzgBHMjgechE3cuUcFxTtK/exec";
 
 let allSongs = [];
 let currentLanguage = "全部";
@@ -1101,12 +1101,19 @@ async function loadStaffSummary() {
     }
     box.innerHTML = res.data.map(item => `
       <div class="customer-card" style="display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="color:#f59e0b;font-weight:bold;font-size:0.9rem;">桌號：${escapeHtml(item.table_no)}</div>
-          <div class="customer-card-name">[${escapeHtml(item.song_no)}] ${escapeHtml(item.title)}</div>
-          <div class="customer-card-info">${escapeHtml(item.artist)}</div>
+        <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+          <div class="cover" style="width:48px;height:48px;font-size:1.1rem;">🎤</div>
+          <div style="min-width:0;flex:1;">
+            <div style="color:#f59e0b;font-weight:bold;font-size:0.85rem;margin-bottom:2px;">桌號：${escapeHtml(item.table_no)}</div>
+            <div class="customer-card-name" style="font-size:0.95rem;">[${escapeHtml(item.song_no)}] ${escapeHtml(item.title)}</div>
+            <div class="customer-card-info" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              ${escapeHtml(item.artist)} · ${escapeHtml(item.language || "未分類")}
+              ${item.category ? " · " + escapeHtml(item.category) : ""}
+              ${item.brand ? " · " + escapeHtml(item.brand) : ""}
+            </div>
+          </div>
         </div>
-        <button class="add-btn" onclick="staffAddQueue('${escapeJs(item.song_no)}', '${escapeJs(item.title)}', '${escapeJs(item.artist)}')">＋ 加入播放</button>
+        <button class="add-btn" style="flex-shrink:0;margin-left:10px;" onclick="staffAddQueue('${escapeJs(item.song_no)}', '${escapeJs(item.title)}', '${escapeJs(item.artist)}', '${escapeJs(item.brand || '')}', '${escapeJs(item.language || '')}', '${escapeJs(item.category || '')}', '${escapeJs(item.media || '')}')">＋ 加入播放</button>
       </div>
     `).join("");
   } catch (e) {
@@ -1114,8 +1121,18 @@ async function loadStaffSummary() {
   }
 }
 
-async function staffAddQueue(songNo, title, artist) {
-  queue.push({ song_no: songNo, title, artist, queueId: Date.now() + Math.random(), table_no: "點歌員新增" });
+async function staffAddQueue(songNo, title, artist, brand, language, category, media) {
+  queue.push({ 
+    song_no: songNo, 
+    title, 
+    artist, 
+    brand, 
+    language, 
+    category, 
+    media, 
+    queueId: Date.now() + Math.random(), 
+    table_no: "點歌員新增" 
+  });
   saveQueue();
   renderQueue();
   showToast(`已由總表加入：${title}`);
@@ -1235,7 +1252,7 @@ function escapeJs(str) {
   return String(str || "").replace(/'/g, "\\'");
 }
 
-function endService() {
+async function endService() {
   if (confirm("確定要結束本次服務並清除桌次待播與客戶紀錄嗎？")) {
     queue = [];
     currentCustomer = null;
@@ -1246,6 +1263,9 @@ function endService() {
     document.getElementById("tableNoInput").value = "";
     renderQueue();
     updateCustomerUI();
+    
+    // 💡 新增：強制向後端同步清除該桌次/散客的佇列
+    await syncQueueToServer();
     showToast("已結束本次服務");
   }
 }
