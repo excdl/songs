@@ -109,6 +109,7 @@ header {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 .customer-info {
   color: #bbb;
@@ -520,6 +521,7 @@ audio { width: 100%; margin-top: 10px; }
   <div class="customer-area">
     <div class="customer-info" id="customerInfo">尚未選擇客戶</div>
     <button class="customer-btn" onclick="openCustomerModal()">👤 選擇客戶</button>
+    <button class="customer-btn" id="historyBtn" style="display:none;" onclick="openHistory()">📜 歷史歌單</button>
     <button class="customer-btn" id="clearCustomerBtn" style="display:none" onclick="clearCustomer()">清除</button>
     <button class="staff-nav-btn" onclick="openStaffModal()">📋 點歌員總表</button>
   </div>
@@ -598,6 +600,19 @@ audio { width: 100%; margin-top: 10px; }
       <input class="modal-input" id="newCustomerPhone" placeholder="電話（選填）">
       <input class="modal-input" id="newCustomerNote" placeholder="備註（選填）">
       <button class="primary-btn" onclick="createCustomer()">建立客戶</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📜 歷史歌單 Modal -->
+<div class="modal" id="historyModal">
+  <div class="modal-box" style="max-width: 650px;">
+    <div class="modal-header">
+      <div class="modal-title" id="historyCustomerName">📜 客戶歷史歌單</div>
+      <button class="close-btn" onclick="document.getElementById('historyModal').classList.remove('show')">×</button>
+    </div>
+    <div class="history-list" id="historyList" style="display:grid;gap:10px;max-height:60vh;overflow-y:auto;">
+      <div class="empty">載入歷史歌單中...</div>
     </div>
   </div>
 </div>
@@ -829,7 +844,7 @@ async function fetchSongs(keyword = "") {
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
   try {
     const res = await apiGet({ action: "songs", q: keyword, language: currentLanguage });
-    allSongs = res.data || [];
+    allSongs = Array.isArray(res.data) ? res.data : [];
     renderSongList();
   } catch (e) {
     list.innerHTML = `<div class="empty">搜尋失敗</div>`;
@@ -838,22 +853,41 @@ async function fetchSongs(keyword = "") {
 
 function renderSongList() {
   const list = document.getElementById("songList");
-  if (!allSongs.length) {
-    list.innerHTML = `<div class="empty">找不到符合的歌曲</div>`;
+  const sortType = document.getElementById("sortSelect").value;
+  
+  if (!allSongs || allSongs.length === 0) {
+    list.innerHTML = `<div class="empty">沒有找到符合的歌曲</div>`;
     return;
   }
-  list.innerHTML = allSongs.map(song => {
-    const isFav = favorites.includes(String(song.song_no));
+
+  let displaySongs = [...allSongs];
+  if (sortType === "title_len_asc") {
+    displaySongs.sort((a, b) => String(a.title || "").length - String(b.title || "").length);
+  } else if (sortType === "title_len_desc") {
+    displaySongs.sort((a, b) => String(b.title || "").length - String(a.title || "").length);
+  } else if (sortType === "artist_len_asc") {
+    displaySongs.sort((a, b) => String(a.artist || "").length - String(b.artist || "").length);
+  } else if (sortType === "artist_len_desc") {
+    displaySongs.sort((a, b) => String(b.artist || "").length - String(a.artist || "").length);
+  }
+
+  list.innerHTML = displaySongs.map(song => {
+    const songNo = String(song.song_no || "");
+    const isFavorite = favorites.includes(songNo);
     return `
       <div class="song">
         <div class="cover">🎤</div>
         <div class="song-info">
-          <div class="song-title">[${song.song_no}] ${escapeHtml(song.title)}</div>
-          <div class="artist">${escapeHtml(song.artist)} · ${escapeHtml(song.language || "")}</div>
+          <div class="song-title">[${escapeHtml(songNo)}] ${escapeHtml(song.title)}</div>
+          <div class="artist">
+            ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
+            ${song.category ? " · " + escapeHtml(song.category) : ""}
+            ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+          </div>
         </div>
         <div class="song-actions">
-          <button class="favorite ${isFav ? "active" : ""}" onclick="toggleFavorite('${song.song_no}')">${isFav ? "♥" : "♡"}</button>
-          <button class="add-btn" onclick="addSong('${song.song_no}')">＋ 點歌</button>
+          <button class="favorite ${isFavorite ? "active" : ""}" onclick="toggleFavorite('${escapeJs(songNo)}')">${isFavorite ? "♥" : "♡"}</button>
+          <button class="add-btn" onclick="addSong('${escapeJs(songNo)}')">＋ 點歌</button>
         </div>
       </div>
     `;
@@ -872,6 +906,23 @@ async function addSong(songNo) {
   await syncQueueToServer();
 }
 
+async function addHistorySong(songNo, title, artist, brand, language) {
+  const newItem = {
+    song_no: songNo,
+    title: title,
+    artist: artist,
+    brand: brand,
+    language: language,
+    queueId: Date.now() + Math.random(),
+    table_no: currentTableNo || "散客"
+  };
+  queue.push(newItem);
+  saveQueue();
+  renderQueue();
+  showToast(`已從歷史歌單點歌：${title}`);
+  await syncQueueToServer();
+}
+
 async function syncQueueToServer() {
   try {
     await apiPost({ action: "updateQueue", table_no: currentTableNo || "散客", queue });
@@ -881,22 +932,31 @@ async function syncQueueToServer() {
 function renderQueue() {
   const list = document.getElementById("queueList");
   const count = document.getElementById("queueCount");
+  if (!list || !count) return;
+
   count.textContent = `${queue.length} 首`;
-  if (!queue.length) {
-    list.innerHTML = `<div class="empty">目前沒有待播歌曲</div>`;
+
+  if (queue.length === 0) {
+    list.innerHTML = `<div class="empty">目前沒有待播歌曲<br>選擇歌曲開始點歌吧 🎤</div>`;
     return;
   }
-  list.innerHTML = queue.map((song, i) => `
+
+  list.innerHTML = queue.map((song, index) => `
     <div class="song" style="display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-        <div style="font-weight:bold;min-width:24px;text-align:center;color:#8d7aff;">${i+1}</div>
-        <div class="cover" style="width:40px;height:40px;font-size:1rem;">🎤</div>
+        <div class="queue-number" style="font-weight:bold;min-width:24px;text-align:center;">${index + 1}</div>
+        <div class="cover">🎤</div>
         <div class="song-info" style="min-width:0;flex:1;">
-          <div class="song-title">[${song.song_no}] ${escapeHtml(song.title)}</div>
-          <div class="artist">${escapeHtml(song.artist)}</div>
+          <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
+          <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
+            ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+          </div>
         </div>
       </div>
-      <button class="remove-btn" onclick="removeSong(${song.queueId})">×</button>
+      <div class="song-actions" style="margin-left:10px;">
+        <button class="remove-btn" onclick="removeSong(${song.queueId})" style="padding:4px 8px;">×</button>
+      </div>
     </div>
   `).join("");
 }
@@ -929,6 +989,49 @@ async function nextSong() {
   renderQueue();
   playCurrent();
   await syncQueueToServer();
+}
+
+async function openHistory() {
+  if (!currentCustomer) {
+    showToast("請先選擇客戶");
+    return;
+  }
+
+  document.getElementById("historyModal").classList.add("show");
+  document.getElementById("historyCustomerName").textContent = `📜 客戶：${currentCustomer.name} 的歷史歌單`;
+  const list = document.getElementById("historyList");
+  list.innerHTML = `<div class="empty">載入歷史歌單中...</div>`;
+
+  try {
+    const result = await apiGet({ action: "history", customer_id: currentCustomer.customer_id });
+    if (!result.success) throw new Error(result.message);
+
+    if (!result.data || result.data.length === 0) {
+      list.innerHTML = `<div class="empty">此客戶目前沒有歷史歌單</div>`;
+      return;
+    }
+
+    list.innerHTML = result.data.map(song => `
+      <div class="song" style="display:flex;align-items:center;justify-content:space-between;margin:0 0 10px 0;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <div class="cover">📜</div>
+          <div class="song-info" style="min-width:0;flex:1;">
+            <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
+            <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
+              ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+            </div>
+          </div>
+        </div>
+        <div class="song-actions" style="margin-left:10px;">
+          <button class="add-btn" onclick="addHistorySong('${escapeJs(song.song_no)}', '${escapeJs(song.title)}', '${escapeJs(song.artist)}', '${escapeJs(song.brand)}', '${escapeJs(song.language)}')">＋ 點歌</button>
+        </div>
+      </div>
+    `).join("");
+  } catch (error) {
+    console.error(error);
+    list.innerHTML = `<div class="empty">歷史歌單載入失敗</div>`;
+  }
 }
 
 // ---------------------------------------------------------
@@ -998,26 +1101,127 @@ function openCustomerModal() { document.getElementById("customerModal").classLis
 function closeCustomerModal() { document.getElementById("customerModal").classList.remove("show"); }
 function updateCustomerUI() {
   const info = document.getElementById("customerInfo");
-  if (!currentCustomer) { info.textContent = "尚未選擇客戶"; return; }
+  const historyBtn = document.getElementById("historyBtn");
+  const clearBtn = document.getElementById("clearCustomerBtn");
+  
+  if (!currentCustomer) {
+    info.textContent = "尚未選擇客戶";
+    if (historyBtn) historyBtn.style.display = "none";
+    if (clearBtn) clearBtn.style.display = "none";
+    return;
+  }
   info.innerHTML = `目前客戶：<span class="customer-name">${escapeHtml(currentCustomer.name)}</span>`;
+  if (historyBtn) historyBtn.style.display = "inline-block";
+  if (clearBtn) clearBtn.style.display = "inline-block";
 }
+
+function clearCustomer() {
+  currentCustomer = null;
+  localStorage.removeItem("currentCustomer");
+  updateCustomerUI();
+  showToast("已清除目前客戶");
+}
+
+async function searchCustomers(keyword) {
+  const resultsDiv = document.getElementById("customerResults");
+  resultsDiv.innerHTML = `<div class="empty">搜尋客戶中...</div>`;
+  try {
+    const res = await apiGet({ action: "searchCustomers", q: keyword });
+    if (!res.success || !res.data || res.data.length === 0) {
+      resultsDiv.innerHTML = `<div class="empty">找不到相關客戶</div>`;
+      return;
+    }
+    resultsDiv.innerHTML = res.data.map(c => `
+      <div class="customer-card">
+        <div>
+          <div class="customer-card-name">${escapeHtml(c.name)}</div>
+          <div class="customer-card-info">電話：${escapeHtml(c.phone || "無")} | 備註：${escapeHtml(c.note || "無")}</div>
+        </div>
+        <div class="customer-actions">
+          <button class="select-customer" onclick="selectCustomer('${escapeJs(c.customer_id)}', '${escapeJs(c.name)}')">選擇</button>
+        </div>
+      </div>
+    `).join("");
+  } catch (e) {
+    resultsDiv.innerHTML = `<div class="empty">搜尋客戶失敗</div>`;
+  }
+}
+
+function selectCustomer(id, name) {
+  currentCustomer = { customer_id: id, name: name };
+  localStorage.setItem("currentCustomer", JSON.stringify(currentCustomer));
+  updateCustomerUI();
+  closeCustomerModal();
+  showToast(`已選擇客戶：${name}`);
+}
+
+function showCreateCustomer() {
+  const area = document.getElementById("createCustomerArea");
+  area.style.display = area.style.display === "none" ? "block" : "none";
+}
+
+async function createCustomer() {
+  const name = document.getElementById("newCustomerName").value.trim();
+  const phone = document.getElementById("newCustomerPhone").value.trim();
+  const note = document.getElementById("newCustomerNote").value.trim();
+
+  if (!name) {
+    showToast("請輸入客戶姓名");
+    return;
+  }
+
+  try {
+    const res = await apiPost({ action: "createCustomer", name, phone, note });
+    if (res.success) {
+      showToast("新增客戶成功！");
+      selectCustomer(res.customer_id, name);
+      document.getElementById("newCustomerName").value = "";
+      document.getElementById("newCustomerPhone").value = "";
+      document.getElementById("newCustomerNote").value = "";
+      document.getElementById("createCustomerArea").style.display = "none";
+    } else {
+      showToast(res.message || "新增失敗");
+    }
+  } catch (e) {
+    showToast("新增客戶發生錯誤");
+  }
+}
+
 function toggleFavorite(songNo) {
   if (favorites.includes(songNo)) favorites = favorites.filter(id => id !== songNo);
   else favorites.push(songNo);
   localStorage.setItem("ktvFavorites", JSON.stringify(favorites));
   renderSongList();
 }
+
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 2500);
 }
+
 function escapeHtml(str) {
   return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
 function escapeJs(str) {
   return String(str || "").replace(/'/g, "\\'");
+}
+
+function endService() {
+  if (confirm("確定要結束本次服務並清除桌次待播與客戶紀錄嗎？")) {
+    queue = [];
+    currentCustomer = null;
+    currentTableNo = "";
+    localStorage.removeItem("ktvQueue");
+    localStorage.removeItem("currentCustomer");
+    localStorage.removeItem("currentTableNo");
+    document.getElementById("tableNoInput").value = "";
+    renderQueue();
+    updateCustomerUI();
+    showToast("已結束本次服務");
+  }
 }
 </script>
 </body>
