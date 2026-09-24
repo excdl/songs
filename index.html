@@ -816,7 +816,7 @@ audio {
 
 <script>
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzTfWxOJiNppOtnG7LT0fZj9-HyskHD81UDWt_4LK0wY2qEvdCGSSjyioEsfIq3JbXL/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzvrErpJreSzD8rZXSXpYZgzTsHB5dnPv3JLKHE00YlIOUShTe-pEj7L0gJqQCKZaYy/exec";
 
 /* =========================================================
  * 全域狀態
@@ -1633,7 +1633,31 @@ function escapeHtml(value) {
 function escapeJs(value) {
   return String(value ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\r/g, "\\r").replace(/\n/g, "\\n");
 }
+// 範例前端點擊「全場點歌總表」時的驗證邏輯
+async function openGlobalQueue() {
+  const password = prompt("請輸入管理員密碼以查看全場點歌總表：");
+  if (!password) return;
 
+  // 1. 驗證密碼
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "verifyPassword", password: password })
+  });
+  const result = await res.json();
+
+  if (result.success) {
+    // 2. 密碼正確，取得全場待播清單
+    const queueRes = await fetch(`${API_URL}?action=getQueue&password=${password}`);
+    const queueData = await queueRes.json();
+    
+    if (queueData.success) {
+      // 顯示您的全場點歌總表 Modal / 畫面
+      showQueueModal(queueData.queue);
+    }
+  } else {
+    alert("密碼錯誤！");
+  }
+}
 </script>
 </body>
 </html>
