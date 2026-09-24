@@ -330,6 +330,13 @@ main {
   max-height: 380px;
   overflow-y: auto;
 }
+.queue-number {
+  width: 26px;
+  color: #8d7aff;
+  font-weight: bold;
+  text-align: center;
+  font-size: 0.95rem;
+}
 .remove-btn {
   width: 32px;
   height: 32px;
@@ -489,16 +496,27 @@ audio { width: 100%; margin-top: 10px; }
 }
 .select-customer { background: linear-gradient(135deg, #ff2bd6, #744cff); }
 .edit-customer { background: #39394d; }
+.history-list { display: grid; gap: 10px; margin-top: 15px; }
 .edit-customer-area { display: none; margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.08); }
 .edit-title { color: #aaa; margin-bottom: 10px; font-size: 0.85rem; }
 .edit-customer-id { color: #777; font-size: 0.75rem; margin-bottom: 10px; }
 #categoryContainer { display: none !important; }
 
-@media(max-width:900px) {
-  .content { grid-template-columns: 1fr; }
+/* 📱 手機與平板響應式 RWD 優化 */
+@media (max-width: 768px) {
+  html { font-size: 100%; }
+  header { height: 65px; padding: 0 15px; }
+  .logo { font-size: 1.15rem; }
+  .customer-btn { padding: 6px 10px; font-size: 0.8rem; }
+  main { padding: 15px; }
+  .content { grid-template-columns: 1fr; gap: 15px; }
+  .quick-row { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .quick-row::-webkit-scrollbar { display: none; }
   .queue-panel { position: static; }
-  header { padding: 0 15px; }
-  .logo { font-size: 1.1rem; }
+  .queue-list { max-height: 280px; }
+  .modal-box { max-width: 100%; max-height: 95vh; padding: 16px; }
+}
+@media (max-width: 480px) {
   .customer-info { display: none; }
 }
 </style>
@@ -601,6 +619,15 @@ audio { width: 100%; margin-top: 10px; }
       <input class="modal-input" id="newCustomerNote" placeholder="備註（選填）">
       <button class="primary-btn" onclick="createCustomer()">建立客戶</button>
     </div>
+    <div id="editCustomerArea" class="edit-customer-area">
+      <div class="edit-title">✏️ 編輯舊客戶</div>
+      <div class="edit-customer-id" id="editCustomerId"></div>
+      <input class="modal-input" id="editCustomerName" placeholder="客戶姓名">
+      <input class="modal-input" id="editCustomerPhone" placeholder="電話（選填）">
+      <input class="modal-input" id="editCustomerNote" placeholder="備註（選填）">
+      <button class="primary-btn" onclick="updateCustomer()">💾 儲存客戶資料</button>
+      <button class="secondary-btn" onclick="cancelEditCustomer()">取消編輯</button>
+    </div>
   </div>
 </div>
 
@@ -609,9 +636,9 @@ audio { width: 100%; margin-top: 10px; }
   <div class="modal-box" style="max-width: 650px;">
     <div class="modal-header">
       <div class="modal-title" id="historyCustomerName">📜 客戶歷史歌單</div>
-      <button class="close-btn" onclick="document.getElementById('historyModal').classList.remove('show')">×</button>
+      <button class="close-btn" onclick="closeHistoryModal()">×</button>
     </div>
-    <div class="history-list" id="historyList" style="display:grid;gap:10px;max-height:60vh;overflow-y:auto;">
+    <div class="history-list" id="historyList">
       <div class="empty">載入歷史歌單中...</div>
     </div>
   </div>
@@ -625,17 +652,15 @@ audio { width: 100%; margin-top: 10px; }
       <button class="close-btn" onclick="closeStaffModal()">×</button>
     </div>
     
-    <!-- 密碼驗證區 -->
     <div id="staffAuthBox">
       <div style="color:#bbb;margin-bottom:12px;font-size:0.9rem;">此區域僅限點歌員檢視，請輸入管理密碼：</div>
       <input type="password" class="modal-input" id="staffPasswordInput" placeholder="請輸入密碼">
       <button class="primary-btn" onclick="verifyStaffPassword()">解鎖總表</button>
     </div>
 
-    <!-- 總表內容區 (解鎖後顯示) -->
     <div id="staffContentBox" style="display:none;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <div style="color:#aaa;font-size:0.9rem;">全場各桌點歌彙整清單（可由點歌員依序加入播放清單）：</div>
+        <div style="color:#aaa;font-size:0.9rem;">全場各桌點歌彙整清單：</div>
         <button class="customer-btn" onclick="loadStaffSummary()">🔄 重新整理</button>
       </div>
       <div id="staffSummaryList" style="display:grid;gap:12px;max-height:60vh;overflow-y:auto;">
@@ -702,7 +727,7 @@ async function checkLocationAuth() {
   const errorEl = document.getElementById("authError");
   const retryBtn = document.getElementById("retryAuthBtn");
 
-  descEl.textContent = "正在確認網路與定位...";
+  descEl.textContent = "正在取得網路與 GPS 定位...";
   try {
     let publicIp = "";
     try {
@@ -944,7 +969,7 @@ function renderQueue() {
   list.innerHTML = queue.map((song, index) => `
     <div class="song" style="display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-        <div class="queue-number" style="font-weight:bold;min-width:24px;text-align:center;">${index + 1}</div>
+        <div class="queue-number">${index + 1}</div>
         <div class="cover">🎤</div>
         <div class="song-info" style="min-width:0;flex:1;">
           <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
@@ -1029,14 +1054,14 @@ async function openHistory() {
       </div>
     `).join("");
   } catch (error) {
-    console.error(error);
     list.innerHTML = `<div class="empty">歷史歌單載入失敗</div>`;
   }
 }
 
-// ---------------------------------------------------------
-// 點歌員總表與密碼功能
-// ---------------------------------------------------------
+function closeHistoryModal() {
+  document.getElementById("historyModal").classList.remove("show");
+}
+
 function openStaffModal() {
   document.getElementById("staffModal").classList.add("show");
   document.getElementById("staffAuthBox").style.display = "block";
@@ -1099,6 +1124,7 @@ async function staffAddQueue(songNo, title, artist) {
 
 function openCustomerModal() { document.getElementById("customerModal").classList.add("show"); }
 function closeCustomerModal() { document.getElementById("customerModal").classList.remove("show"); }
+
 function updateCustomerUI() {
   const info = document.getElementById("customerInfo");
   const historyBtn = document.getElementById("historyBtn");
