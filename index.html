@@ -131,6 +131,16 @@ header {
 .customer-btn:hover {
   background: #3b3b50;
 }
+.staff-btn {
+  background: linear-gradient(135deg, #ff7e2b, #ff2bd6);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
 .table-tag {
   background: linear-gradient(135deg, #22d3ee, #744cff);
   color: white;
@@ -757,7 +767,7 @@ audio {
 </head>
 <body>
 
-<!-- 🔒 據點安全性驗證遮罩 -->
+<!-- 🔒 據點安全驗證遮罩 -->
 <div id="authOverlay">
   <div class="auth-card">
     <div class="auth-title">🎤 據點安全驗證</div>
@@ -771,6 +781,7 @@ audio {
 <header>
   <div class="logo">🎤 KTV 點歌系統</div>
   <div class="customer-area">
+    <button class="staff-btn" onclick="openAllQueuesModal()">📋 全場點歌總表</button>
     <button class="table-tag" id="tableTagBtn" onclick="openTableModal()">📍 桌號：未設定</button>
     <div class="customer-info" id="customerInfo">尚未選擇客戶</div>
     <button class="customer-btn" onclick="openCustomerModal()">👤 選擇客戶</button>
@@ -829,6 +840,21 @@ audio {
     </aside>
   </div>
 </main>
+
+<!-- 📋 全場點歌總表 Modal (點歌員管理專用) -->
+<div class="modal" id="allQueuesModal">
+  <div class="modal-box" style="max-width: 700px;">
+    <div class="modal-header">
+      <div class="modal-title">📋 全場各桌點歌總表</div>
+      <button class="close-btn" onclick="closeAllQueuesModal()">×</button>
+    </div>
+    <div style="color: #aaa; font-size: 0.85rem; margin-bottom: 12px;">此處顯示目前所有桌次已點播但尚未播放的歌曲清單，點歌員可在此協助檢視或移除。</div>
+    <div class="history-list" id="allQueuesList" style="max-height: 60vh; overflow-y: auto;">
+      <div class="empty">載入中...</div>
+    </div>
+    <button class="secondary-btn" onclick="loadAllQueues()" style="margin-top: 15px;">🔄 重新整理總表</button>
+  </div>
+</div>
 
 <!-- 桌號設定 Modal -->
 <div class="modal" id="tableModal">
@@ -899,7 +925,7 @@ let allSongs = [];
 let currentLanguage = "全部";
 let currentCategory = "全部";
 let currentCustomer = null;
-let currentTable = ""; // 📍 新增桌號變數
+let currentTable = ""; 
 let queue = [];
 let favorites = [];
 let currentSong = null;
@@ -943,7 +969,6 @@ function loadLocalStorage() {
     currentCustomer = null;
   }
 
-  // 📍 讀取儲存的桌號
   try {
     const savedTable = localStorage.getItem("currentTable");
     if (savedTable) {
@@ -961,7 +986,6 @@ window.addEventListener("DOMContentLoaded", function () {
   loadLocalStorage();
   updateTableUI();
   
-  // 檢查網址列是否自動帶入桌號（例如：index.html?table=A05）
   const urlParams = new URLSearchParams(window.location.search);
   const tableParam = urlParams.get("table");
   if (tableParam) {
@@ -969,7 +993,6 @@ window.addEventListener("DOMContentLoaded", function () {
     localStorage.setItem("currentTable", currentTable);
     updateTableUI();
   } else if (!currentTable) {
-    // 若沒有設定過桌號，初次進入自動跳出設定視窗
     setTimeout(() => openTableModal(), 500);
   }
 
@@ -1013,6 +1036,78 @@ function updateTableUI() {
   const btn = document.getElementById("tableTagBtn");
   if (btn) {
     btn.textContent = currentTable ? `📍 桌號：${currentTable}` : "📍 桌號：未設定";
+  }
+}
+
+/* =========================================================
+ * 📋 全場點歌總表 Modal 控制
+ * ========================================================= */
+async function openAllQueuesModal() {
+  document.getElementById("allQueuesModal").classList.add("show");
+  await loadAllQueues();
+}
+
+function closeAllQueuesModal() {
+  document.getElementById("allQueuesModal").classList.remove("show");
+}
+
+async function loadAllQueues() {
+  const listEl = document.getElementById("allQueuesList");
+  if (!listEl) return;
+  listEl.innerHTML = `<div class="empty">正在取得全場點歌總表...</div>`;
+
+  try {
+    const result = await apiGet({ action: "getQueue" });
+    if (result && result.success && Array.isArray(result.queue)) {
+      const allQ = result.queue;
+      if (allQ.length === 0) {
+        listEl.innerHTML = `<div class="empty">目前全場沒有任何待播歌曲</div>`;
+        return;
+      }
+
+      listEl.innerHTML = allQ.map((song, index) => `
+        <div class="song" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+            <div class="queue-number">${index + 1}</div>
+            <div class="cover" style="width:42px;height:42px;font-size:1rem;">🎤</div>
+            <div class="song-info" style="min-width:0;flex:1;">
+              <div class="song-title">
+                ${song.table_no ? `<span class="queue-table-badge">${escapeHtml(song.table_no)}</span>` : `<span class="queue-table-badge" style="background:#ff4d6d">未標示桌號</span>`}
+                [${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}
+              </div>
+              <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
+              </div>
+            </div>
+          </div>
+          <div class="song-actions" style="margin-left:10px;">
+            <button class="remove-btn" onclick="staffRemoveSong(${song.queueId})" style="background:#ff4d6d;color:white;padding:6px 12px;font-size:0.85rem;border-radius:8px;width:auto;">刪除</button>
+          </div>
+        </div>
+      `).join("");
+    } else {
+      listEl.innerHTML = `<div class="empty">無法取得全場點歌資料</div>`;
+    }
+  } catch (e) {
+    console.error("載入全場總表失敗", e);
+    listEl.innerHTML = `<div class="empty">連線伺服器失敗</div>`;
+  }
+}
+
+async function staffRemoveSong(queueId) {
+  if (!confirm("確定要從全場待播清單中移除這首歌曲嗎？")) return;
+
+  try {
+    queue = queue.filter(song => Number(song.queueId) !== Number(queueId));
+    saveQueue();
+    renderQueue();
+
+    await apiPost({ action: "updateQueue", queue });
+    showToast("已從總表中移除歌曲");
+    await loadAllQueues();
+  } catch (e) {
+    console.error("移除失敗", e);
+    showToast("移除失敗");
   }
 }
 
@@ -1103,9 +1198,6 @@ async function checkLocationAuth() {
   }
 }
 
-/* =========================================================
- * 將 IP + GPS 一起送給後端
- * ========================================================= */
 async function verifyByServer(lat, lng, ip) {
   const descEl = document.getElementById("authDesc");
   descEl.textContent = "正在比對公司據點 IP / GPS...";
@@ -1120,8 +1212,6 @@ async function verifyByServer(lat, lng, ip) {
   if (!response.ok) throw new Error(`伺服器錯誤：HTTP ${response.status}`);
 
   const result = await response.json();
-  console.log("據點驗證結果：", result);
-
   if (result.success && result.rangeStatus === "有效打卡區") {
     await authSuccess(result);
     return;
@@ -1134,9 +1224,6 @@ async function verifyByServer(lat, lng, ip) {
   authFailed(`❌ 驗證未通過\n\n最近據點：${companyText}\n距離：${distanceText}\n${ipText}`);
 }
 
-/* =========================================================
- * 驗證成功
- * ========================================================= */
 async function authSuccess(result) {
   const overlay = document.getElementById("authOverlay");
   const descEl = document.getElementById("authDesc");
@@ -1159,9 +1246,6 @@ async function authSuccess(result) {
   }, 400);
 }
 
-/* =========================================================
- * 驗證失敗
- * ========================================================= */
 function authFailed(message) {
   const descEl = document.getElementById("authDesc");
   const spinnerEl = document.getElementById("authSpinner");
@@ -1235,9 +1319,6 @@ function initKtvSystem() {
   updateCustomerUI();
 }
 
-/* =========================================================
- * 多人點歌自動同步機制
- * ========================================================= */
 function startQueueSync() {
   if (syncInterval) clearInterval(syncInterval);
   syncInterval = setInterval(async () => {
@@ -1250,15 +1331,10 @@ function startQueueSync() {
           renderQueue();
         }
       }
-    } catch (e) {
-      // 網路暫時中斷時忽略
-    }
+    } catch (e) {}
   }, 3000);
 }
 
-/* =========================================================
- * API GET & POST
- * ========================================================= */
 async function apiGet(params) {
   const query = new URLSearchParams(params);
   const response = await fetch(`${API_URL}?${query.toString()}`, { method: "GET", cache: "no-store" });
@@ -1276,9 +1352,6 @@ async function apiPost(data) {
   return response.json();
 }
 
-/* =========================================================
- * 語言與分類載入
- * ========================================================= */
 async function loadLanguages() {
   const allowedLangs = ["粵語", "日文", "越語"];
   const container = document.getElementById("languageContainer");
@@ -1323,9 +1396,6 @@ function filterCategory(category, button) {
   fetchSongs(keyword);
 }
 
-/* =========================================================
- * 歌曲搜尋
- * ========================================================= */
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
   if (!list) return;
@@ -1354,9 +1424,6 @@ async function fetchSongs(keyword = "") {
   }
 }
 
-/* =========================================================
- * 歌曲列表渲染
- * ========================================================= */
 function renderSongList() {
   const list = document.getElementById("songList");
   if (!list) return;
@@ -1404,9 +1471,6 @@ function renderSongList() {
   }).join("");
 }
 
-/* =========================================================
- * 加入歌曲與待播清單 (附帶桌號)
- * ========================================================= */
 async function addSong(songNo) {
   if (!currentTable) {
     showToast("請先設定桌號！");
@@ -1420,7 +1484,6 @@ async function addSong(songNo) {
     return;
   }
 
-  // 📍 將目前的桌號紀錄寫入點播項目中
   const newQueueItem = { 
     ...song, 
     table_no: currentTable, 
@@ -1487,9 +1550,6 @@ async function removeSong(queueId) {
   }
 }
 
-/* =========================================================
- * 播放控制
- * ========================================================= */
 function playCurrent() {
   if (!currentSong) {
     if (queue.length === 0) {
@@ -1505,7 +1565,6 @@ function playCurrent() {
   const media = currentSong.media || `music/${encodeURIComponent(currentSong.title)}.mp3`;
   player.src = media;
   
-  // 播放器面板同步顯示點歌桌號
   const tableText = currentSong.table_no ? `【${currentSong.table_no}】` : "";
   document.getElementById("currentTitle").textContent = `${tableText} [${currentSong.song_no}] ${currentSong.title}`;
   document.getElementById("currentArtist").textContent = currentSong.artist || "-";
@@ -1543,9 +1602,6 @@ async function nextSong() {
   }
 }
 
-/* =========================================================
- * 收藏與儲存
- * ========================================================= */
 function toggleFavorite(songNo) {
   songNo = String(songNo);
   if (favorites.includes(songNo)) {
@@ -1568,9 +1624,6 @@ function saveQueue() {
   }
 }
 
-/* =========================================================
- * 客戶 Modal 與管理
- * ========================================================= */
 function openCustomerModal() {
   document.getElementById("customerModal").classList.add("show");
   document.getElementById("customerSearch").value = "";
@@ -1742,9 +1795,6 @@ async function updateCustomer() {
   }
 }
 
-/* =========================================================
- * 歷史歌單
- * ========================================================= */
 async function openHistory() {
   if (!currentCustomer) {
     showToast("請先選擇客戶");
@@ -1825,7 +1875,7 @@ async function endService() {
     return;
   }
   if (queue.length === 0) {
-    showToast("目前沒有點歌紀錄");
+    showToast("print 目前沒有點歌紀錄");
     return;
   }
   if (!confirm(`確定結束「${currentCustomer.name}」本次服務？\n\n目前 ${queue.length} 首歌曲會寫入歷史歌單。`)) return;
@@ -1860,9 +1910,6 @@ async function endService() {
   }
 }
 
-/* =========================================================
- * Toast 提示與跳脫輔助
- * ========================================================= */
 let toastTimer = null;
 function showToast(message) {
   const toast = document.getElementById("toast");
