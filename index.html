@@ -673,7 +673,7 @@ audio { width: 100%; margin-top: 10px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwy__qq_dz6RdHi-4Zt-onigCS66CRgtKhxxnCgoytASiHzgBHMjgechE3cuUcFxTtK/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw7Hbm0_XWHIQqNwJyBZSncU6DxxMK-0NLc9EM9H7SI7kyPW-VUlKBI_6fsPuxOhMYt/exec";
 
 let allSongs = [];
 let currentLanguage = "全部";
@@ -1149,11 +1149,29 @@ async function loadStaffSummary() {
             </div>
           </div>
         </div>
-        <button class="add-btn" style="flex-shrink:0;margin-left:10px;" onclick="staffAddQueue('${escapeJs(item.song_no)}', '${escapeJs(item.title)}', '${escapeJs(item.artist)}', '${escapeJs(item.brand || '')}', '${escapeJs(item.language || '')}', '${escapeJs(item.category || '')}', '${escapeJs(item.media || '')}')">＋ 加入播放</button>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:10px;">
+          <button class="add-btn" onclick="staffAddQueue('${escapeJs(item.song_no)}', '${escapeJs(item.title)}', '${escapeJs(item.artist)}', '${escapeJs(item.brand || '')}', '${escapeJs(item.language || '')}', '${escapeJs(item.category || '')}', '${escapeJs(item.media || '')}')">＋ 播放</button>
+          <button class="remove-btn" style="background:#39394d;color:#ff4d6d;width:38px;height:38px;border-radius:8px;" onclick="staffRemoveQueue('${escapeJs(item.table_no)}', '${escapeJs(item.song_no)}')">🗑️</button>
+        </div>
       </div>
     `).join("");
   } catch (e) {
     box.innerHTML = `<div class="empty">載入總表失敗</div>`;
+  }
+}
+
+async function staffRemoveQueue(tableNo, songNo) {
+  if (!confirm(`確定要從「${tableNo}」的待播清單中刪除這首歌嗎？`)) return;
+  try {
+    const res = await apiPost({ action: "removeTableQueueSong", table_no: tableNo, song_no: songNo });
+    if (res.success) {
+      showToast("已成功刪除該首歌曲");
+      loadStaffSummary(); // 重新整理總表
+    } else {
+      showToast(res.message || "刪除失敗");
+    }
+  } catch (e) {
+    showToast("刪除時發生錯誤");
   }
 }
 
