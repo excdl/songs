@@ -1369,20 +1369,46 @@ function escapeJs(str) {
 }
 
 async function endService() {
-  if (confirm("確定要結束本次服務並清除桌次待播與客戶紀錄嗎？")) {
-    queue = [];
-    currentCustomer = null;
-    currentTableNo = "";
-    localStorage.removeItem("ktvQueue");
-    localStorage.removeItem("currentCustomer");
-    localStorage.removeItem("currentTableNo");
-    document.getElementById("tableNoInput").value = "";
-    renderQueue();
-    updateCustomerUI();
-    
-    await syncQueueToServer();
-    showToast("已結束本次服務");
+  if (!confirm("確定要結束本次服務？系統將自動把本次點歌紀錄存入歷史，並清空目前清單。")) return;
+
+  // 1. 如果有選擇客戶且目前 queue 裡面有歌曲，自動存入歷史點歌
+  if (currentCustomer && queue.length > 0) {
+    try {
+      showToast("正在自動儲存歷史歌單...");
+      const historyRes = await apiPost({
+        action: "saveHistory",
+        customer_id: currentCustomer.customer_id,
+        customer_name: currentCustomer.name,
+        songs: queue
+      });
+      
+      if (historyRes.success) {
+        showToast("已成功將本次點歌紀錄存入客戶歷史！");
+      } else {
+        console.warn("歷史存檔失敗：", historyRes.message);
+      }
+    } catch (e) {
+      console.error("儲存歷史紀錄發生錯誤", e);
+    }
   }
+
+  // 2. 清除前端狀態與 LocalStorage
+  queue = [];
+  currentCustomer = null;
+  currentTableNo = "";
+  localStorage.removeItem("ktvQueue");
+  localStorage.removeItem("currentCustomer");
+  localStorage.removeItem("currentTableNo");
+  
+  const tableInput = document.getElementById("tableNoInput");
+  if (tableInput) tableInput.value = "";
+  
+  renderQueue();
+  updateCustomerUI();
+  
+  // 3. 同步清空伺服器端的該桌排隊快取
+  await syncQueueToServer();
+  showToast("已結束本次服務並清空待播清單");
 }
 </script>
 </body>
