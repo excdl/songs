@@ -934,7 +934,14 @@ async function addSong(songNo) {
   const song = allSongs.find(s => String(s.song_no) === String(songNo));
   if (!song) return;
 
-  const newItem = { ...song, queueId: Date.now() + Math.random(), table_no: currentTableNo };
+  // 【加入時間戳記】確保每首歌帶有點歌當下的精確時間 (Date.now())
+  const newItem = { 
+    ...song, 
+    queueId: Date.now() + Math.random(), 
+    table_no: currentTableNo,
+    added_at: Date.now() 
+  };
+  
   queue.push(newItem);
   saveQueue();
   renderQueue();
@@ -952,6 +959,7 @@ async function addHistorySong(songNo, title, artist, brand, language) {
     return;
   }
 
+  // 【加入時間戳記】
   const newItem = {
     song_no: songNo,
     title: title,
@@ -959,8 +967,10 @@ async function addHistorySong(songNo, title, artist, brand, language) {
     brand: brand,
     language: language,
     queueId: Date.now() + Math.random(),
-    table_no: currentTableNo
+    table_no: currentTableNo,
+    added_at: Date.now()
   };
+  
   queue.push(newItem);
   saveQueue();
   renderQueue();
@@ -1160,6 +1170,7 @@ async function staffRemoveQueue(tableNo, songNo) {
 }
 
 async function staffAddQueue(songNo, title, artist, brand, language, category, media) {
+  // 【加入時間戳記】
   queue.push({ 
     song_no: songNo, 
     title, 
@@ -1169,14 +1180,15 @@ async function staffAddQueue(songNo, title, artist, brand, language, category, m
     category, 
     media, 
     queueId: Date.now() + Math.random(), 
-    table_no: "點歌員新增" 
+    table_no: "點歌員新增",
+    added_at: Date.now()
   });
+  
   saveQueue();
   renderQueue();
   showToast(`已由總表加入：${title}`);
   await syncQueueToServer();
 }
-
 /* =========================================================
  * 客戶 Modal 與管理 (已整合最新搜尋與編輯機制)
  * ========================================================= */
