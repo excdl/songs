@@ -161,7 +161,7 @@ main {
   height: 52px;
   border: 1px solid #38384c;
   border-radius: 12px;
-  padding: 0 85px 0 45px;
+  padding: 0 85px 0 45px; /* 預留左右圖標/按鈕空間 */
   background: #151522;
   color: white;
   outline: none;
@@ -706,6 +706,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwhxfkkqrjfvqwrIZl7cSOy
 
 let allSongs = [];
 let currentLanguage = "全部";
+let currentCategory = "全部";
 let currentCustomer = null;
 let currentTableNo = "";
 let queue = [];
@@ -818,6 +819,7 @@ function initKtvSystem() {
   startQueueSync();
 
   const searchInput = document.getElementById("searchInput");
+  // 監聽 Enter 鍵直接執行搜尋
   searchInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
       triggerSearch();
@@ -835,6 +837,7 @@ function initKtvSystem() {
   });
 }
 
+// 控制清除按鈕（X）的顯示與隱藏
 function handleSearchInput(val) {
   const clearBtn = document.getElementById("clearSearchBtn");
   if (val.trim().length > 0) {
@@ -844,11 +847,13 @@ function handleSearchInput(val) {
   }
 }
 
+// 點擊放大鏡或按 Enter 時觸發搜尋
 function triggerSearch() {
   const kw = document.getElementById("searchInput").value.trim();
   fetchSongs(kw);
 }
 
+// 清除輸入框並清空搜尋結果
 function clearSearch() {
   const searchInput = document.getElementById("searchInput");
   searchInput.value = "";
@@ -913,25 +918,15 @@ function filterLanguage(lang, btn) {
 
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
+  if (!keyword && currentLanguage === "全部") {
+    allSongs = [];
+    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋</div>`;
+    return;
+  }
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
   try {
-    // 這裡改為抓取該語言的所有歌曲，或者利用關鍵字查詢，再透過 Fuse.js 做前端模糊比對
-    const res = await apiGet({ action: "songs", q: "", language: currentLanguage });
-    let rawData = Array.isArray(res.data) ? res.data : [];
-
-    if (keyword) {
-      // 🌟 使用 Fuse.js 進行前端模糊比對（同時對 title, artist, song_no 進行智慧搜尋）
-      const fuse = new Fuse(rawData, {
-        keys: ["title", "artist", "song_no"],
-        threshold: 0.45, // 數值越小越嚴格，0.45 適合模糊錯字或部分相符
-        includeScore: true
-      });
-      const result = fuse.search(keyword);
-      allSongs = result.map(item => item.item);
-    } else {
-      allSongs = rawData;
-    }
-
+    const res = await apiGet({ action: "songs", q: keyword, language: currentLanguage });
+    allSongs = Array.isArray(res.data) ? res.data : [];
     renderSongList();
   } catch (e) {
     list.innerHTML = `<div class="empty">搜尋失敗</div>`;
