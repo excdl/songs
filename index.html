@@ -161,7 +161,7 @@ main {
   height: 52px;
   border: 1px solid #38384c;
   border-radius: 12px;
-  padding: 0 20px 0 48px;
+  padding: 0 85px 0 45px;
   background: #151522;
   color: white;
   outline: none;
@@ -171,13 +171,39 @@ main {
   border-color: #9b5cff;
   box-shadow: 0 0 0 3px rgba(155,92,255,.15);
 }
-.search-icon {
+.search-icon-btn {
   position: absolute;
-  left: 18px;
-  top: 15px;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
   font-size: 1.1rem;
   color: #999;
+  cursor: pointer;
+  padding: 4px;
 }
+.search-icon-btn:hover { color: #fff; }
+
+.clear-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #2a2a3c;
+  color: #aaa;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.clear-btn:hover { background: #ff2bd6; color: white; }
+
 .sort-box select {
   height: 52px;
   padding: 0 16px;
@@ -547,17 +573,11 @@ audio { width: 100%; margin-top: 10px; }
 
 <main>
   <div class="search-area">
-  <div class="search-box">
-    <span class="search-icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="輸入歌名、歌手或歌號..." autocomplete="off">
-  </div>
-  <!-- 新增搜尋按鈕 -->
-  <button class="add-btn" id="searchBtn" style="height: 52px; padding: 0 20px; font-size: 1rem;" onclick="triggerSearch()">搜尋</button>
-  
-  <div class="sort-box">
-    <!-- 排序選單維持不變 -->
-  </div>
-</div>
+    <div class="search-box">
+      <button class="search-icon-btn" onclick="triggerSearch()" title="點擊搜尋">🔍</button>
+      <input type="text" id="searchInput" placeholder="輸入歌名、歌手或歌號..." autocomplete="off" oninput="handleSearchInput(this.value)">
+      <button class="clear-btn" id="clearSearchBtn" onclick="clearSearch()" title="清除輸入">×</button>
+    </div>
     <div class="sort-box">
       <select id="sortSelect" onchange="renderSongList()">
         <option value="default">預設排序</option>
@@ -577,7 +597,7 @@ audio { width: 100%; margin-top: 10px; }
     <section>
       <div class="section-title">🎵 歌曲列表</div>
       <div class="song-list" id="songList">
-        <div class="empty">請輸入歌名、歌手或歌號開始搜尋<br>或直接點選上方語言／分類</div>
+        <div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋<br>或直接點選上方語言分類</div>
       </div>
     </section>
     <aside class="queue-panel">
@@ -686,18 +706,16 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwhxfkkqrjfvqwrIZl7cSOy
 
 let allSongs = [];
 let currentLanguage = "全部";
-let currentCategory = "全部";
 let currentCustomer = null;
 let currentTableNo = "";
 let queue = [];
 let favorites = [];
 let currentSong = null;
-let searchTimer = null;
 let customerSearchTimer = null;
 let ktvInitialized = false;
 let authChecking = false;
 let syncInterval = null;
-let editingCustomerId = null; // 用於追蹤目前正在編輯的客戶 ID
+let editingCustomerId = null;
 
 function loadLocalStorage() {
   try {
@@ -800,15 +818,12 @@ function initKtvSystem() {
   startQueueSync();
 
   const searchInput = document.getElementById("searchInput");
-
-  // 監聽 Enter 鍵直接搜尋
   searchInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
       triggerSearch();
     }
   });
 
-  // 客戶搜尋維持原本即時搜尋或同樣改按鈕皆可（客戶數量通常較少，影響不大）
   document.getElementById("customerSearch").addEventListener("input", function() {
     clearTimeout(customerSearchTimer);
     const kw = this.value.trim();
@@ -820,10 +835,27 @@ function initKtvSystem() {
   });
 }
 
-// 點擊或按下 Enter 後才發動搜尋
+function handleSearchInput(val) {
+  const clearBtn = document.getElementById("clearSearchBtn");
+  if (val.trim().length > 0) {
+    clearBtn.style.display = "flex";
+  } else {
+    clearBtn.style.display = "none";
+  }
+}
+
 function triggerSearch() {
   const kw = document.getElementById("searchInput").value.trim();
   fetchSongs(kw);
+}
+
+function clearSearch() {
+  const searchInput = document.getElementById("searchInput");
+  searchInput.value = "";
+  document.getElementById("clearSearchBtn").style.display = "none";
+  allSongs = [];
+  document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋<br>或直接點選上方語言分類</div>`;
+  searchInput.focus();
 }
 
 function updateTableNo(val) {
@@ -881,15 +913,25 @@ function filterLanguage(lang, btn) {
 
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
-  if (!keyword && currentLanguage === "全部") {
-    allSongs = [];
-    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號開始搜尋</div>`;
-    return;
-  }
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
   try {
-    const res = await apiGet({ action: "songs", q: keyword, language: currentLanguage });
-    allSongs = Array.isArray(res.data) ? res.data : [];
+    // 這裡改為抓取該語言的所有歌曲，或者利用關鍵字查詢，再透過 Fuse.js 做前端模糊比對
+    const res = await apiGet({ action: "songs", q: "", language: currentLanguage });
+    let rawData = Array.isArray(res.data) ? res.data : [];
+
+    if (keyword) {
+      // 🌟 使用 Fuse.js 進行前端模糊比對（同時對 title, artist, song_no 進行智慧搜尋）
+      const fuse = new Fuse(rawData, {
+        keys: ["title", "artist", "song_no"],
+        threshold: 0.45, // 數值越小越嚴格，0.45 適合模糊錯字或部分相符
+        includeScore: true
+      });
+      const result = fuse.search(keyword);
+      allSongs = result.map(item => item.item);
+    } else {
+      allSongs = rawData;
+    }
+
     renderSongList();
   } catch (e) {
     list.innerHTML = `<div class="empty">搜尋失敗</div>`;
@@ -951,7 +993,6 @@ async function addSong(songNo) {
   const song = allSongs.find(s => String(s.song_no) === String(songNo));
   if (!song) return;
 
-  // 【加入時間戳記】確保每首歌帶有點歌當下的精確時間 (Date.now())
   const newItem = { 
     ...song, 
     queueId: Date.now() + Math.random(), 
@@ -976,7 +1017,6 @@ async function addHistorySong(songNo, title, artist, brand, language) {
     return;
   }
 
-  // 【加入時間戳記】
   const newItem = {
     song_no: songNo,
     title: title,
@@ -1187,7 +1227,6 @@ async function staffRemoveQueue(tableNo, songNo) {
 }
 
 async function staffAddQueue(songNo, title, artist, brand, language, category, media) {
-  // 【加入時間戳記】
   queue.push({ 
     song_no: songNo, 
     title, 
@@ -1206,16 +1245,13 @@ async function staffAddQueue(songNo, title, artist, brand, language, category, m
   showToast(`已由總表加入：${title}`);
   await syncQueueToServer();
 }
-/* =========================================================
- * 客戶 Modal 與管理 (已整合最新搜尋與編輯機制)
- * ========================================================= */
+
 function openCustomerModal() {
   document.getElementById("customerModal").classList.add("show");
   document.getElementById("customerSearch").value = "";
   document.getElementById("customerResults").innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
   document.getElementById("createCustomerArea").style.display = "none";
   cancelEditCustomer();
-
   setTimeout(() => document.getElementById("customerSearch").focus(), 100);
 }
 
@@ -1226,7 +1262,6 @@ function closeCustomerModal() {
 async function searchCustomers(keyword) {
   const resultBox = document.getElementById("customerResults");
   if (!resultBox) return;
-
   resultBox.innerHTML = `<div class="empty">搜尋中...</div>`;
 
   try {
@@ -1251,7 +1286,6 @@ async function searchCustomers(keyword) {
       </div>
     `).join("");
   } catch (error) {
-    console.error(error);
     resultBox.innerHTML = `<div class="empty">客戶搜尋失敗</div>`;
   }
 }
@@ -1388,7 +1422,6 @@ function escapeJs(str) {
 async function endService() {
   if (!confirm("確定要結束本次服務？系統將自動把本次點歌紀錄存入歷史，並清空目前清單。")) return;
 
-  // 1. 如果有選擇客戶且目前 queue 裡面有歌曲，自動存入歷史點歌
   if (currentCustomer && queue.length > 0) {
     try {
       showToast("正在自動儲存歷史歌單...");
@@ -1398,18 +1431,12 @@ async function endService() {
         customer_name: currentCustomer.name,
         songs: queue
       });
-      
       if (historyRes.success) {
         showToast("已成功將本次點歌紀錄存入客戶歷史！");
-      } else {
-        console.warn("歷史存檔失敗：", historyRes.message);
       }
-    } catch (e) {
-      console.error("儲存歷史紀錄發生錯誤", e);
-    }
+    } catch (e) {}
   }
 
-  // 2. 清除前端狀態與 LocalStorage
   queue = [];
   currentCustomer = null;
   currentTableNo = "";
@@ -1422,8 +1449,6 @@ async function endService() {
   
   renderQueue();
   updateCustomerUI();
-  
-  // 3. 同步清空伺服器端的該桌排隊快取
   await syncQueueToServer();
   showToast("已結束本次服務並清空待播清單");
 }
