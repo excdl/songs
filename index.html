@@ -547,10 +547,17 @@ audio { width: 100%; margin-top: 10px; }
 
 <main>
   <div class="search-area">
-    <div class="search-box">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="輸入歌名、歌手或歌號..." autocomplete="off">
-    </div>
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="輸入歌名、歌手或歌號..." autocomplete="off">
+  </div>
+  <!-- 新增搜尋按鈕 -->
+  <button class="add-btn" id="searchBtn" style="height: 52px; padding: 0 20px; font-size: 1rem;" onclick="triggerSearch()">搜尋</button>
+  
+  <div class="sort-box">
+    <!-- 排序選單維持不變 -->
+  </div>
+</div>
     <div class="sort-box">
       <select id="sortSelect" onchange="renderSongList()">
         <option value="default">預設排序</option>
@@ -792,12 +799,16 @@ function initKtvSystem() {
   loadLanguages();
   startQueueSync();
 
-  document.getElementById("searchInput").addEventListener("input", function() {
-    clearTimeout(searchTimer);
-    const kw = this.value.trim();
-    searchTimer = setTimeout(() => fetchSongs(kw), 200);
+  const searchInput = document.getElementById("searchInput");
+
+  // 監聽 Enter 鍵直接搜尋
+  searchInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      triggerSearch();
+    }
   });
 
+  // 客戶搜尋維持原本即時搜尋或同樣改按鈕皆可（客戶數量通常較少，影響不大）
   document.getElementById("customerSearch").addEventListener("input", function() {
     clearTimeout(customerSearchTimer);
     const kw = this.value.trim();
@@ -807,6 +818,12 @@ function initKtvSystem() {
     }
     customerSearchTimer = setTimeout(() => searchCustomers(kw), 250);
   });
+}
+
+// 點擊或按下 Enter 後才發動搜尋
+function triggerSearch() {
+  const kw = document.getElementById("searchInput").value.trim();
+  fetchSongs(kw);
 }
 
 function updateTableNo(val) {
