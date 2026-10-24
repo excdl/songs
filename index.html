@@ -706,6 +706,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzIvrN2IrRehY9IVGhq913U
 
 let allSongs = [];
 let currentLanguage = "全部";
+let currentBrand = "全部"; // 增加品牌狀態變數，支援多維度篩選
 let currentCategory = "全部";
 let currentCustomer = null;
 let currentTableNo = "";
@@ -810,16 +811,15 @@ function authFailed(msg) {
   document.getElementById("retryAuthBtn").style.display = "block";
 }
 
-function initKtvSystem() {
+async function initKtvSystem() {
   if (ktvInitialized) return;
   ktvInitialized = true;
   renderQueue();
   updateCustomerUI();
-  loadLanguages();
+  await loadFilterCategories(); // 改為載入整合後的分類按鈕（全部、金嗓、弘音 + 動態語言）
   startQueueSync();
 
   const searchInput = document.getElementById("searchInput");
-  // 監聽 Enter 鍵直接執行搜尋
   searchInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
       triggerSearch();
@@ -859,7 +859,7 @@ function clearSearch() {
   searchInput.value = "";
   document.getElementById("clearSearchBtn").style.display = "none";
   allSongs = [];
-  document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋<br>或直接點選上方語言分類</div>`;
+  document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋<br>或直接點選上方分類</div>`;
   searchInput.focus();
 }
 
@@ -901,31 +901,64 @@ async function apiPost(data) {
   return res.json();
 }
 
-async function loadLanguages() {
-  const allowedLangs = ["粵語", "日文", "越語"];
+// 動態載入分類按鈕（預設「全部」、「金嗓」、「弘音」並結合後端讀取到的其他可用語言）
+async function loadFilterCategories() {
   const container = document.getElementById("languageContainer");
   if (!container) return;
-  container.innerHTML = `<button class="category active" onclick="filterLanguage('全部', this)">全部</button>` +
-    allowedLangs.map(l => `<button class="category" onclick="filterLanguage('${l}', this)">${l}</button>`).join("");
+
+  let buttonsHtml = `
+    <button class="category active" onclick="filterCategory('全部', '全部', this)">全部</button>
+    <button class="category" onclick="filterCategory('brand', '金嗓', this)">金嗓</button>
+    <button class="category" onclick="filterCategory('brand', '弘音', this)">弘音</button>
+  `;
+
+  try {
+    const res = await apiGet({ action: "languages" });
+    if (res && res.success && Array.isArray(res.data)) {
+      res.data.forEach(lang => {
+        buttonsHtml += `<button class="category" onclick="filterCategory('language', '${escapeJs(lang)}', this)">${escapeHtml(lang)}</button>`;
+      });
+    }
+  } catch (e) {
+    console.error("載入語言清單失敗", e);
+  }
+
+  container.innerHTML = buttonsHtml;
 }
 
-function filterLanguage(lang, btn) {
-  currentLanguage = lang;
+// 統一的篩選切換函式（相容品牌與語言的多維度篩選）
+function filterCategory(type, val, btn) {
+  if (type === "全部") {
+    currentBrand = "全部";
+    currentLanguage = "全部";
+  } else if (type === "brand") {
+    currentBrand = val;
+    currentLanguage = "全部"; // 切換品牌時重置語言篩選，維持架構單純高效
+  } else if (type === "language") {
+    currentLanguage = val;
+  }
+
   document.querySelectorAll("#languageContainer .category").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
+
   fetchSongs(document.getElementById("searchInput").value.trim());
 }
 
 async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
-  if (!keyword && currentLanguage === "全部") {
+  if (!keyword && currentBrand === "全部" && currentLanguage === "全部") {
     allSongs = [];
     list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋</div>`;
     return;
   }
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
   try {
-    const res = await apiGet({ action: "songs", q: keyword, language: currentLanguage });
+    const res = await apiGet({ 
+      action: "songs", 
+      q: keyword, 
+      language: currentLanguage,
+      brand: currentBrand 
+    });
     allSongs = Array.isArray(res.data) ? res.data : [];
     renderSongList();
   } catch (e) {
@@ -962,9 +995,9 @@ function renderSongList() {
         <div class="song-info">
           <div class="song-title">[${escapeHtml(songNo)}] ${escapeHtml(song.title)}</div>
           <div class="artist">
-            ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
-            ${song.category ? " · " + escapeHtml(song.category) : ""}
-            ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+            ${escapeHtml(song.artist)} • ${escapeHtml(song.language || "未分類")}
+            ${song.category ? " • " + escapeHtml(song.category) : ""}
+            ${song.brand ? " • " + escapeHtml(song.brand) : ""}
           </div>
         </div>
         <div class="song-actions">
@@ -1056,8 +1089,8 @@ function renderQueue() {
         <div class="song-info" style="min-width:0;flex:1;">
           <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
           <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
-            ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+            ${escapeHtml(song.artist)} • ${escapeHtml(song.language || "未分類")}
+            ${song.brand ? " • " + escapeHtml(song.brand) : ""}
           </div>
         </div>
       </div>
@@ -1125,8 +1158,8 @@ async function openHistory() {
           <div class="song-info" style="min-width:0;flex:1;">
             <div class="song-title">[${escapeHtml(song.song_no)}] ${escapeHtml(song.title)}</div>
             <div class="artist" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              ${escapeHtml(song.artist)} · ${escapeHtml(song.language || "未分類")}
-              ${song.brand ? " · " + escapeHtml(song.brand) : ""}
+              ${escapeHtml(song.artist)} • ${escapeHtml(song.language || "未分類")}
+              ${song.brand ? " • " + escapeHtml(song.brand) : ""}
             </div>
           </div>
         </div>
@@ -1189,9 +1222,9 @@ async function loadStaffSummary() {
             <div style="color:#f59e0b;font-weight:bold;font-size:0.85rem;margin-bottom:2px;">桌號：${escapeHtml(item.table_no)}</div>
             <div class="customer-card-name" style="font-size:0.95rem;">[${escapeHtml(item.song_no)}] ${escapeHtml(item.title)}</div>
             <div class="customer-card-info" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              ${escapeHtml(item.artist)} · ${escapeHtml(item.language || "未分類")}
-              ${item.category ? " · " + escapeHtml(item.category) : ""}
-              ${item.brand ? " · " + escapeHtml(item.brand) : ""}
+              ${escapeHtml(item.artist)} • ${escapeHtml(item.language || "未分類")}
+              ${item.category ? " • " + escapeHtml(item.category) : ""}
+              ${item.brand ? " • " + escapeHtml(item.brand) : ""}
             </div>
           </div>
         </div>
