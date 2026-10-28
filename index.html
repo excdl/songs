@@ -957,23 +957,28 @@ async function loadFilterCategories() {
   container.innerHTML = buttonsHtml;
 }
 
-// 統一的篩選切換函式
+// 統一的篩選切換函式（點擊「全部」時徹底重置篩選條件）
 function filterCategory(type, val, btn) {
   if (type === "全部") {
     currentBrand = "全部";
     currentLanguage = "全部";
   } else if (type === "brand") {
     currentBrand = val;
-    currentLanguage = "全部"; 
+    // 保留當前語言或重置視您的需求而定，此處維持切換品牌
   } else if (type === "language") {
     currentLanguage = val;
   }
 
+  // 更新按鈕 Active 樣式
   document.querySelectorAll("#languageContainer .category").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
 
+  // 取得目前輸入框的關鍵字，並帶入重置後的分類進行重新搜尋
   const searchInput = document.getElementById("searchInput");
-  fetchSongs(searchInput ? searchInput.value.trim() : "");
+  const keyword = searchInput ? searchInput.value.trim() : "";
+  
+  // 呼叫 fetchSongs 並強制重新整理快取
+  fetchSongs(keyword, true);
 }
 
 // --- 優化後的 fetchSongs（加入防抖與前端快取機制） ---
