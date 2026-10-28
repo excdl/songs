@@ -702,7 +702,7 @@ audio { width: 100%; margin-top: 10px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwXhIfZL-5r2sHKWrl19L5eISq-uanfkFmjbs2dhX38ySYyGZjTvoN1-Zm9Zq3Q9v9V/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzIvrN2IrRehY9IVGhq913UjLyPCFVxHOiHu-XfhDotz3PWPdbt0t0OU9ESoeijKbm_/exec";
 
 let allSongs = [];
 let currentLanguage = "全部";
@@ -714,7 +714,6 @@ let queue = [];
 let favorites = [];
 let currentSong = null;
 let customerSearchTimer = null;
-let songSearchTimer = null; // 新增歌曲搜尋防手震計時器
 let ktvInitialized = false;
 let authChecking = false;
 let syncInterval = null;
@@ -740,8 +739,7 @@ function loadLocalStorage() {
     const savedTable = localStorage.getItem("currentTableNo");
     if (savedTable) {
       currentTableNo = savedTable;
-      const tableInput = document.getElementById("tableNoInput");
-      if (tableInput) tableInput.value = savedTable;
+      document.getElementById("tableNoInput").value = savedTable;
     }
   } catch (e) { currentTableNo = ""; }
 }
@@ -818,26 +816,13 @@ async function initKtvSystem() {
   ktvInitialized = true;
   renderQueue();
   updateCustomerUI();
-  await loadFilterCategories(); 
+  await loadFilterCategories(); // 改為載入整合後的分類按鈕（全部、金嗓、弘音 + 動態語言）
   startQueueSync();
 
   const searchInput = document.getElementById("searchInput");
   searchInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
-      clearTimeout(songSearchTimer);
       triggerSearch();
-    }
-  });
-
-  // 增加輸入即時搜尋防手震（打字超過 2 字或清空時自動觸發，提升流暢度）
-  searchInput.addEventListener("input", function() {
-    handleSearchInput(this.value);
-    clearTimeout(songSearchTimer);
-    const kw = this.value.trim();
-    if (kw.length >= 2 || kw.length === 0) {
-      songSearchTimer = setTimeout(() => {
-        fetchSongs(kw);
-      }, 350);
     }
   });
 
@@ -874,7 +859,7 @@ function clearSearch() {
   searchInput.value = "";
   document.getElementById("clearSearchBtn").style.display = "none";
   allSongs = [];
-  document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號搜尋<br>或直接點選上方分類</div>`;
+  document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋<br>或直接點選上方分類</div>`;
   searchInput.focus();
 }
 
@@ -889,17 +874,16 @@ function startQueueSync() {
   if (syncInterval) clearInterval(syncInterval);
   syncInterval = setInterval(async () => {
     try {
-      // 修正對應後端的 API action 取得目前桌號清單
-      const res = await apiGet({ action: "getAllQueues" });
-      if (res && res.success && Array.isArray(res.data)) {
-        // 過濾出屬於目前桌次的歌曲
-        const myTableSongs = res.data.filter(item => String(item.table_no) === String(currentTableNo));
-        if (currentTableNo && myTableSongs.length > 0) {
-          // 可選擇性同步伺服器回傳的最新狀態
+      const res = await apiGet({ action: "getQueue", table_no: currentTableNo });
+      if (res && res.success && Array.isArray(res.queue)) {
+        if (JSON.stringify(res.queue) !== JSON.stringify(queue)) {
+          queue = res.queue;
+          saveQueue();
+          renderQueue();
         }
       }
     } catch (e) {}
-  }, 5000); // 延長輪詢間隔為 5 秒，降低伺服器負擔
+  }, 3000);
 }
 
 async function apiGet(params) {
@@ -917,7 +901,7 @@ async function apiPost(data) {
   return res.json();
 }
 
-// 動態載入分類按鈕
+// 動態載入分類按鈕（預設「全部」、「金嗓」、「弘音」並結合後端讀取到的其他可用語言）
 async function loadFilterCategories() {
   const container = document.getElementById("languageContainer");
   if (!container) return;
@@ -942,14 +926,14 @@ async function loadFilterCategories() {
   container.innerHTML = buttonsHtml;
 }
 
-// 統一的篩選切換函式
+// 統一的篩選切換函式（相容品牌與語言的多維度篩選）
 function filterCategory(type, val, btn) {
   if (type === "全部") {
     currentBrand = "全部";
     currentLanguage = "全部";
   } else if (type === "brand") {
     currentBrand = val;
-    currentLanguage = "全部"; 
+    currentLanguage = "全部"; // 切換品牌時重置語言篩選，維持架構單純高效
   } else if (type === "language") {
     currentLanguage = val;
   }
@@ -964,7 +948,7 @@ async function fetchSongs(keyword = "") {
   const list = document.getElementById("songList");
   if (!keyword && currentBrand === "全部" && currentLanguage === "全部") {
     allSongs = [];
-    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號搜尋</div>`;
+    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋</div>`;
     return;
   }
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
@@ -978,7 +962,7 @@ async function fetchSongs(keyword = "") {
     allSongs = Array.isArray(res.data) ? res.data : [];
     renderSongList();
   } catch (e) {
-    list.innerHTML = `<div class="empty">搜尋失敗，請稍後再試</div>`;
+    list.innerHTML = `<div class="empty">搜尋失敗</div>`;
   }
 }
 
