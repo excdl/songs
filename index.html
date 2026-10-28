@@ -915,10 +915,11 @@ async function loadFilterCategories() {
   const container = document.getElementById("languageContainer");
   if (!container) return;
 
+  // 預設將 active 放在弘音按鈕
   let buttonsHtml = `
-    <button class="category active" onclick="filterCategory('全部', '全部', this)">全部</button>
+    <button class="category" onclick="filterCategory('全部', '全部', this)">全部</button>
     <button class="category" onclick="filterCategory('brand', '金嗓', this)">金嗓</button>
-    <button class="category" onclick="filterCategory('brand', '弘音', this)">弘音</button>
+    <button class="category active" onclick="filterCategory('brand', '弘音', this)">弘音</button>
   `;
 
   try {
@@ -933,6 +934,7 @@ async function loadFilterCategories() {
   }
 
   container.innerHTML = buttonsHtml;
+  
 }
 
 function filterCategory(type, val, btn) {
