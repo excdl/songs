@@ -161,7 +161,7 @@ main {
   height: 52px;
   border: 1px solid #38384c;
   border-radius: 12px;
-  padding: 0 85px 0 45px; /* 預留左右圖標/按鈕空間 */
+  padding: 0 85px 0 45px;
   background: #151522;
   color: white;
   outline: none;
@@ -706,7 +706,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyfEc5xQK0ZWfR-6Xb-j4jR
 
 let allSongs = [];
 let currentLanguage = "全部";
-let currentBrand = "弘音"; // 預設改為弘音
+let currentBrand = "弘音"; 
 let currentCategory = "全部";
 let currentCustomer = null;
 let currentTableNo = "";
@@ -719,6 +719,10 @@ let ktvInitialized = false;
 let authChecking = false;
 let syncInterval = null;
 let editingCustomerId = null;
+
+// ✨ 優化 1：宣告 AbortController 與快取容器以防範請求競態與重複發送
+let currentSearchController = null;
+const searchCache = new Map();
 
 function loadLocalStorage() {
   try {
@@ -820,7 +824,6 @@ async function initKtvSystem() {
   await loadFilterCategories(); 
   startQueueSync();
 
-  // 初始化後直接以預設的「弘音」載入歌曲
   fetchSongs("", true);
 
   const searchInput = document.getElementById("searchInput");
@@ -829,10 +832,11 @@ async function initKtvSystem() {
     const kw = this.value.trim();
     handleSearchInput(kw);
     
+    // ✨ 優化 2：將 Debounce 縮短至 250ms 反應更靈敏
     clearTimeout(songSearchTimer);
     songSearchTimer = setTimeout(() => {
       fetchSongs(kw);
-    }, 300);
+    }, 250);
   });
 
   searchInput.addEventListener("keydown", function(e) {
@@ -871,7 +875,7 @@ function clearSearch() {
   const searchInput = document.getElementById("searchInput");
   searchInput.value = "";
   document.getElementById("clearSearchBtn").style.display = "none";
-  fetchSongs("", true); // 恢復載入弘音預設清單
+  fetchSongs("", true); 
   searchInput.focus();
 }
 
@@ -898,9 +902,10 @@ function startQueueSync() {
   }, 3000);
 }
 
-async function apiGet(params) {
+async function apiGet(params, signal = null) {
   const query = new URLSearchParams(params);
-  const res = await fetch(`${API_URL}?${query.toString()}`);
+  const options = signal ? { signal } : {};
+  const res = await fetch(`${API_URL}?${query.toString()}`, options);
   return res.json();
 }
 
@@ -917,7 +922,6 @@ async function loadFilterCategories() {
   const container = document.getElementById("languageContainer");
   if (!container) return;
 
-  // 預設選中「弘音」
   let buttonsHtml = `
     <button class="category active" onclick="filterCategory('brand', '弘音', this)">弘音</button>
     <button class="category" onclick="filterCategory('brand', '金嗓', this)">金嗓</button>
@@ -931,9 +935,7 @@ async function loadFilterCategories() {
         buttonsHtml += `<button class="category" onclick="filterCategory('language', '${escapeJs(lang)}', this)">${escapeHtml(lang)}</button>`;
       });
     }
-  } catch (e) {
-    console.error("載入語言清單失敗", e);
-  }
+  } catch (e) {}
 
   container.innerHTML = buttonsHtml;
 }
@@ -958,10 +960,23 @@ function filterCategory(type, val, btn) {
 async function fetchSongs(keyword = "", forceServer = false) {
   const list = document.getElementById("songList");
 
-  if (!forceServer && allSongs.length > 0 && keyword.length > 0) {
+  // ✨ 優化 3：如果強制更新，清除快取
+  if (forceServer) {
+    searchCache.clear();
+  }
+
+  const cacheKey = `${currentBrand}_${currentLanguage}_${keyword}`;
+  if (!forceServer && searchCache.has(cacheKey)) {
+    allSongs = searchCache.get(cacheKey);
     renderSongList();
     return;
   }
+
+  // ✨ 優化 4：取消上一個尚未結束的 API 請求（防止 Race Condition 造成的查無資料錯亂）
+  if (currentSearchController) {
+    currentSearchController.abort();
+  }
+  currentSearchController = new AbortController();
 
   list.innerHTML = `<div class="empty">搜尋中...</div>`;
   try {
@@ -970,11 +985,17 @@ async function fetchSongs(keyword = "", forceServer = false) {
       q: keyword, 
       language: currentLanguage,
       brand: currentBrand 
-    });
+    }, currentSearchController.signal);
+
     allSongs = Array.isArray(res.data) ? res.data : [];
+    searchCache.set(cacheKey, allSongs);
     renderSongList();
   } catch (e) {
-    list.innerHTML = `<div class="empty">搜尋失敗</div>`;
+    if (e.name === 'AbortError') {
+      // 略過被主動取消的請求錯誤
+      return;
+    }
+    list.innerHTML = `<div class="empty">搜尋失敗，請再試一次</div>`;
   }
 }
 
