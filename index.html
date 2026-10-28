@@ -811,17 +811,34 @@ function authFailed(msg) {
   document.getElementById("retryAuthBtn").style.display = "block";
 }
 
+// 新增：防手抖計時器變數
+let songSearchTimer = null;
+
+// 在 initKtvSystem() 中調整 searchInput 的監聽事件
 async function initKtvSystem() {
   if (ktvInitialized) return;
   ktvInitialized = true;
   renderQueue();
   updateCustomerUI();
-  await loadFilterCategories(); // 改為載入整合後的分類按鈕（全部、金嗓、弘音 + 動態語言）
+  await loadFilterCategories();
   startQueueSync();
 
   const searchInput = document.getElementById("searchInput");
+  
+  // 優化：改用 input 事件配合防手抖，並保留 Enter 鍵立即搜尋
+  searchInput.addEventListener("input", function(e) {
+    const kw = this.value.trim();
+    handleSearchInput(kw);
+    
+    clearTimeout(songSearchTimer);
+    songSearchTimer = setTimeout(() => {
+      fetchSongs(kw);
+    }, 300); // 300毫秒延遲，避免連續打字重複發送請求
+  });
+
   searchInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
+      clearTimeout(songSearchTimer);
       triggerSearch();
     }
   });
@@ -835,6 +852,105 @@ async function initKtvSystem() {
     }
     customerSearchTimer = setTimeout(() => searchCustomers(kw), 250);
   });
+}
+
+// 點擊放大鏡或按 Enter 時強制觸發搜尋
+function triggerSearch() {
+  const kw = document.getElementById("searchInput").value.trim();
+  fetchSongs(kw, true); // 強制向伺服器發送最新查詢
+}
+
+// 優化後的 fetchSongs：支援快取比對與強制刷新
+async function fetchSongs(keyword = "", forceServer = false) {
+  const list = document.getElementById("songList");
+  
+  if (!keyword && currentBrand === "全部" && currentLanguage === "全部") {
+    allSongs = [];
+    list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋</div>`;
+    return;
+  }
+
+  // 若資料量已存在且為簡單關鍵字過濾，可優先進行前端過濾以達到秒開效果
+  if (!forceServer && allSongs.length > 0 && keyword.length > 0) {
+    renderSongList();
+    return;
+  }
+
+  list.innerHTML = `<div class="empty">搜尋中...</div>`;
+  try {
+    const res = await apiGet({ 
+      action: "songs", 
+      q: keyword, 
+      language: currentLanguage,
+      brand: currentBrand 
+    });
+    allSongs = Array.isArray(res.data) ? res.data : [];
+    renderSongList();
+  } catch (e) {
+    list.innerHTML = `<div class="empty">搜尋失敗，請稍後再試</div>`;
+  }
+}
+
+// 優化後的 renderSongList：支援更精準的多欄位模糊比對與排序
+function renderSongList() {
+  const list = document.getElementById("songList");
+  const sortType = document.getElementById("sortSelect").value;
+  const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
+
+  if (!allSongs || allSongs.length === 0) {
+    list.innerHTML = `<div class="empty">沒有找到符合的歌曲</div>`;
+    return;
+  }
+
+  // 前端二次過濾（確保即使後端返回較多資料，畫面上也能精確匹配）
+  let displaySongs = allSongs.filter(song => {
+    if (!keyword) return true;
+    const songNo = String(song.song_no || "").toLowerCase();
+    const title = String(song.title || "").toLowerCase();
+    const artist = String(song.artist || "").toLowerCase();
+    return songNo.includes(keyword) || title.includes(keyword) || artist.includes(keyword);
+  });
+
+  if (displaySongs.length === 0) {
+    list.innerHTML = `<div class="empty">沒有找到符合的歌曲</div>`;
+    return;
+  }
+
+  // 排序邏輯
+  if (sortType === "title_len_asc") {
+    displaySongs.sort((a, b) => String(a.title || "").length - String(b.title || "").length);
+  } else if (sortType === "title_len_desc") {
+    displaySongs.sort((a, b) => String(b.title || "").length - String(a.title || "").length);
+  } else if (sortType === "artist_len_asc") {
+    displaySongs.sort((a, b) => String(a.artist || "").length - String(b.artist || "").length);
+  } else if (sortType === "artist_len_desc") {
+    displaySongs.sort((a, b) => String(b.artist || "").length - String(a.artist || "").length);
+  }
+
+  // 使用 DocumentFragment 或一次性組裝 HTML 減少 DOM 重繪
+  const htmlContent = displaySongs.map(song => {
+    const songNo = String(song.song_no || "");
+    const isFavorite = favorites.includes(songNo);
+    return `
+      <div class="song">
+        <div class="cover">🎤</div>
+        <div class="song-info">
+          <div class="song-title">[${escapeHtml(songNo)}] ${escapeHtml(song.title)}</div>
+          <div class="artist">
+            ${escapeHtml(song.artist)} • ${escapeHtml(song.language || "未分類")}
+            ${song.category ? " • " + escapeHtml(song.category) : ""}
+            ${song.brand ? " • " + escapeHtml(song.brand) : ""}
+          </div>
+        </div>
+        <div class="song-actions">
+          <button class="favorite ${isFavorite ? "active" : ""}" onclick="toggleFavorite('${escapeJs(songNo)}')">${isFavorite ? "♥" : "♡"}</button>
+          <button class="add-btn" onclick="addSong('${escapeJs(songNo)}')">＋ 點歌</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  list.innerHTML = htmlContent;
 }
 
 // 控制清除按鈕（X）的顯示與隱藏
