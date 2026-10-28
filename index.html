@@ -935,6 +935,8 @@ async function loadFilterCategories() {
 
   container.innerHTML = buttonsHtml;
   
+  // 頁面初始化時，自動以弘音品牌抓取一次預設歌曲清單
+  fetchSongs("", true);
 }
 
 function filterCategory(type, val, btn) {
