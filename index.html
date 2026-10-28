@@ -702,7 +702,7 @@ audio { width: 100%; margin-top: 10px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzIvrN2IrRehY9IVGhq913UjLyPCFVxHOiHu-XfhDotz3PWPdbt0t0OU9ESoeijKbm_/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwXhIfZL-5r2sHKWrl19L5eISq-uanfkFmjbs2dhX38ySYyGZjTvoN1-Zm9Zq3Q9v9V/exec";
 
 let allSongs = [];
 let currentLanguage = "全部";
@@ -713,11 +713,15 @@ let currentTableNo = "";
 let queue = [];
 let favorites = [];
 let currentSong = null;
-let customerSearchTimer = null;
 let ktvInitialized = false;
 let authChecking = false;
 let syncInterval = null;
 let editingCustomerId = null;
+
+// --- 新增：搜尋快取與防抖變數 ---
+const searchCache = {};
+let searchDebounceTimer = null;
+const DISPLAY_LIMIT = 100; // 單頁最大渲染筆數，避免 DOM 過載卡頓釋放效能
 
 function loadLocalStorage() {
   try {
@@ -739,7 +743,8 @@ function loadLocalStorage() {
     const savedTable = localStorage.getItem("currentTableNo");
     if (savedTable) {
       currentTableNo = savedTable;
-      document.getElementById("tableNoInput").value = savedTable;
+      const tableInput = document.getElementById("tableNoInput");
+      if (tableInput) tableInput.value = savedTable;
     }
   } catch (e) { currentTableNo = ""; }
 }
@@ -757,7 +762,7 @@ async function checkLocationAuth() {
   const errorEl = document.getElementById("authError");
   const retryBtn = document.getElementById("retryAuthBtn");
 
-  descEl.textContent = "正在取得網路與 GPS 定位...";
+  if (descEl) descEl.textContent = "正在取得網路與 GPS 定位...";
   try {
     let publicIp = "";
     try {
@@ -793,22 +798,30 @@ async function verifyByServer(lat, lng, ip) {
   const result = await res.json();
 
   if (result.success && result.rangeStatus === "有效打卡區") {
-    document.getElementById("authOverlay").style.opacity = "0";
-    setTimeout(() => {
-      document.getElementById("authOverlay").style.display = "none";
-      showToast("據點驗證成功！");
-      initKtvSystem();
-    }, 400);
+    const overlay = document.getElementById("authOverlay");
+    if (overlay) {
+      overlay.style.opacity = "0";
+      setTimeout(() => {
+        overlay.style.display = "none";
+        showToast("據點驗證成功！");
+        initKtvSystem();
+      }, 400);
+    }
   } else {
     authFailed(`❌ 驗證未通過\n距離最近據點：${result.distance}公尺`);
   }
 }
 
 function authFailed(msg) {
-  document.getElementById("authDesc").textContent = "存取受阻";
-  document.getElementById("authSpinner").style.display = "none";
-  document.getElementById("authError").textContent = msg;
-  document.getElementById("retryAuthBtn").style.display = "block";
+  const descEl = document.getElementById("authDesc");
+  const spinnerEl = document.getElementById("authSpinner");
+  const errorEl = document.getElementById("authError");
+  const retryBtn = document.getElementById("retryAuthBtn");
+
+  if (descEl) descEl.textContent = "存取受阻";
+  if (spinnerEl) spinnerEl.style.display = "none";
+  if (errorEl) errorEl.textContent = msg;
+  if (retryBtn) retryBtn.style.display = "block";
 }
 
 async function initKtvSystem() {
@@ -816,30 +829,44 @@ async function initKtvSystem() {
   ktvInitialized = true;
   renderQueue();
   updateCustomerUI();
-  await loadFilterCategories(); // 改為載入整合後的分類按鈕（全部、金嗓、弘音 + 動態語言）
+  await loadFilterCategories(); 
   startQueueSync();
 
   const searchInput = document.getElementById("searchInput");
-  searchInput.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-      triggerSearch();
-    }
-  });
+  if (searchInput) {
+    // 支援即時輸入搜尋（結合防抖）
+    searchInput.addEventListener("input", function(e) {
+      handleSearchInput(this.value);
+      fetchSongs(this.value);
+    });
 
-  document.getElementById("customerSearch").addEventListener("input", function() {
-    clearTimeout(customerSearchTimer);
-    const kw = this.value.trim();
-    if (!kw) {
-      document.getElementById("customerResults").innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
-      return;
-    }
-    customerSearchTimer = setTimeout(() => searchCustomers(kw), 250);
-  });
+    searchInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        triggerSearch();
+      }
+    });
+  }
+
+  const customerSearch = document.getElementById("customerSearch");
+  if (customerSearch) {
+    let customerSearchTimer = null;
+    customerSearch.addEventListener("input", function() {
+      clearTimeout(customerSearchTimer);
+      const kw = this.value.trim();
+      const resultsEl = document.getElementById("customerResults");
+      if (!kw) {
+        if (resultsEl) resultsEl.innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
+        return;
+      }
+      customerSearchTimer = setTimeout(() => searchCustomers(kw), 250);
+    });
+  }
 }
 
 // 控制清除按鈕（X）的顯示與隱藏
 function handleSearchInput(val) {
   const clearBtn = document.getElementById("clearSearchBtn");
+  if (!clearBtn) return;
   if (val.trim().length > 0) {
     clearBtn.style.display = "flex";
   } else {
@@ -849,18 +876,22 @@ function handleSearchInput(val) {
 
 // 點擊放大鏡或按 Enter 時觸發搜尋
 function triggerSearch() {
-  const kw = document.getElementById("searchInput").value.trim();
-  fetchSongs(kw);
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput) {
+    fetchSongs(searchInput.value.trim(), true); // 強制重新整理
+  }
 }
 
 // 清除輸入框並清空搜尋結果
 function clearSearch() {
   const searchInput = document.getElementById("searchInput");
-  searchInput.value = "";
-  document.getElementById("clearSearchBtn").style.display = "none";
+  if (searchInput) searchInput.value = "";
+  const clearBtn = document.getElementById("clearSearchBtn");
+  if (clearBtn) clearBtn.style.display = "none";
   allSongs = [];
-  document.getElementById("songList").innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋<br>或直接點選上方分類</div>`;
-  searchInput.focus();
+  const list = document.getElementById("songList");
+  if (list) list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋<br>或直接點選上方分類</div>`;
+  if (searchInput) searchInput.focus();
 }
 
 function updateTableNo(val) {
@@ -901,7 +932,7 @@ async function apiPost(data) {
   return res.json();
 }
 
-// 動態載入分類按鈕（預設「全部」、「金嗓」、「弘音」並結合後端讀取到的其他可用語言）
+// 動態載入分類按鈕
 async function loadFilterCategories() {
   const container = document.getElementById("languageContainer");
   if (!container) return;
@@ -926,14 +957,14 @@ async function loadFilterCategories() {
   container.innerHTML = buttonsHtml;
 }
 
-// 統一的篩選切換函式（相容品牌與語言的多維度篩選）
+// 統一的篩選切換函式
 function filterCategory(type, val, btn) {
   if (type === "全部") {
     currentBrand = "全部";
     currentLanguage = "全部";
   } else if (type === "brand") {
     currentBrand = val;
-    currentLanguage = "全部"; // 切換品牌時重置語言篩選，維持架構單純高效
+    currentLanguage = "全部"; 
   } else if (type === "language") {
     currentLanguage = val;
   }
@@ -941,52 +972,85 @@ function filterCategory(type, val, btn) {
   document.querySelectorAll("#languageContainer .category").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
 
-  fetchSongs(document.getElementById("searchInput").value.trim());
+  const searchInput = document.getElementById("searchInput");
+  fetchSongs(searchInput ? searchInput.value.trim() : "");
 }
 
-async function fetchSongs(keyword = "") {
+// --- 優化後的 fetchSongs（加入防抖與前端快取機制） ---
+function fetchSongs(keyword = "", forceRefresh = false) {
   const list = document.getElementById("songList");
+  if (!list) return;
+  
+  keyword = keyword.trim();
+  const sortSelect = document.getElementById("sortSelect");
+  const sortType = sortSelect ? sortSelect.value : "";
+
   if (!keyword && currentBrand === "全部" && currentLanguage === "全部") {
     allSongs = [];
     list.innerHTML = `<div class="empty">請輸入歌名、歌手或歌號，並按下 Enter 或點擊放大鏡搜尋</div>`;
     return;
   }
-  list.innerHTML = `<div class="empty">搜尋中...</div>`;
-  try {
-    const res = await apiGet({ 
-      action: "songs", 
-      q: keyword, 
-      language: currentLanguage,
-      brand: currentBrand 
-    });
-    allSongs = Array.isArray(res.data) ? res.data : [];
+
+  // 建立前端快取 Key
+  const cacheKey = `${keyword}_${currentBrand}_${currentLanguage}_${sortType}`;
+
+  // 若快取存在且非強制刷新，直接採用快取秒開
+  if (!forceRefresh && searchCache[cacheKey]) {
+    allSongs = searchCache[cacheKey];
     renderSongList();
-  } catch (e) {
-    list.innerHTML = `<div class="empty">搜尋失敗</div>`;
+    return;
   }
+
+  list.innerHTML = `<div class="empty">搜尋中...</div>`;
+
+  // 清除前一次未完成的計時器（防抖 250ms）
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+
+  searchDebounceTimer = setTimeout(async () => {
+    try {
+      const res = await apiGet({ 
+        action: "songs", 
+        q: keyword, 
+        language: currentLanguage,
+        brand: currentBrand 
+      });
+      
+      let rawSongs = Array.isArray(res.data) ? res.data : [];
+      
+      // 排序處理
+      if (sortType === "title_len_asc") {
+        rawSongs.sort((a, b) => String(a.title || "").length - String(b.title || "").length);
+      } else if (sortType === "title_len_desc") {
+        rawSongs.sort((a, b) => String(b.title || "").length - String(a.title || "").length);
+      } else if (sortType === "artist_len_asc") {
+        rawSongs.sort((a, b) => String(a.artist || "").length - String(b.artist || "").length);
+      } else if (sortType === "artist_len_desc") {
+        rawSongs.sort((a, b) => String(b.artist || "").length - String(a.artist || "").length);
+      }
+
+      allSongs = rawSongs;
+      searchCache[cacheKey] = allSongs; // 寫入記憶體快取
+      renderSongList();
+    } catch (e) {
+      list.innerHTML = `<div class="empty">搜尋失敗，請稍後再試</div>`;
+    }
+  }, 250);
 }
 
+// --- 優化後的 renderSongList（限制渲染筆數，避免大 DOM 卡頓） ---
 function renderSongList() {
   const list = document.getElementById("songList");
-  const sortType = document.getElementById("sortSelect").value;
+  if (!list) return;
   
   if (!allSongs || allSongs.length === 0) {
     list.innerHTML = `<div class="empty">沒有找到符合的歌曲</div>`;
     return;
   }
 
-  let displaySongs = [...allSongs];
-  if (sortType === "title_len_asc") {
-    displaySongs.sort((a, b) => String(a.title || "").length - String(b.title || "").length);
-  } else if (sortType === "title_len_desc") {
-    displaySongs.sort((a, b) => String(b.title || "").length - String(a.title || "").length);
-  } else if (sortType === "artist_len_asc") {
-    displaySongs.sort((a, b) => String(a.artist || "").length - String(b.artist || "").length);
-  } else if (sortType === "artist_len_desc") {
-    displaySongs.sort((a, b) => String(b.artist || "").length - String(a.artist || "").length);
-  }
+  // 為了效能，預設只渲染前 100 筆
+  const renderSongs = allSongs.slice(0, DISPLAY_LIMIT);
 
-  list.innerHTML = displaySongs.map(song => {
+  let htmlContent = renderSongs.map(song => {
     const songNo = String(song.song_no || "");
     const isFavorite = favorites.includes(songNo);
     return `
@@ -1007,6 +1071,12 @@ function renderSongList() {
       </div>
     `;
   }).join("");
+
+  if (allSongs.length > DISPLAY_LIMIT) {
+    htmlContent += `<div style="text-align:center;padding:15px;color:#888;font-size:0.85rem;">顯示前 ${DISPLAY_LIMIT} 筆結果（共 ${allSongs.length} 筆），建議輸入更精確的關鍵字</div>`;
+  }
+
+  list.innerHTML = htmlContent;
 }
 
 async function addSong(songNo) {
@@ -1116,9 +1186,12 @@ function playCurrent() {
   if (!currentSong && queue.length > 0) currentSong = queue[0];
   if (!currentSong) { showToast("沒有待播歌曲"); return; }
   const player = document.getElementById("audioPlayer");
+  if (!player) return;
   player.src = currentSong.media || "";
-  document.getElementById("currentTitle").textContent = `[${currentSong.song_no}] ${currentSong.title}`;
-  document.getElementById("currentArtist").textContent = currentSong.artist;
+  const titleEl = document.getElementById("currentTitle");
+  const artistEl = document.getElementById("currentArtist");
+  if (titleEl) titleEl.textContent = `[${currentSong.song_no}] ${currentSong.title}`;
+  if (artistEl) artistEl.textContent = currentSong.artist;
   player.play().catch(() => showToast("播放失敗或無音樂檔"));
 }
 
@@ -1137,9 +1210,14 @@ async function openHistory() {
     return;
   }
 
-  document.getElementById("historyModal").classList.add("show");
-  document.getElementById("historyCustomerName").textContent = `📜 客戶：${currentCustomer.name} 的歷史歌單`;
+  const modal = document.getElementById("historyModal");
+  if (modal) modal.classList.add("show");
+  
+  const nameEl = document.getElementById("historyCustomerName");
+  if (nameEl) nameEl.textContent = `📜 客戶：${currentCustomer.name} 的歷史歌單`;
+  
   const list = document.getElementById("historyList");
+  if (!list) return;
   list.innerHTML = `<div class="empty">載入歷史歌單中...</div>`;
 
   try {
@@ -1174,27 +1252,36 @@ async function openHistory() {
 }
 
 function closeHistoryModal() {
-  document.getElementById("historyModal").classList.remove("show");
+  const modal = document.getElementById("historyModal");
+  if (modal) modal.classList.remove("show");
 }
 
 function openStaffModal() {
-  document.getElementById("staffModal").classList.add("show");
-  document.getElementById("staffAuthBox").style.display = "block";
-  document.getElementById("staffContentBox").style.display = "none";
-  document.getElementById("staffPasswordInput").value = "";
+  const modal = document.getElementById("staffModal");
+  if (modal) modal.classList.add("show");
+  const authBox = document.getElementById("staffAuthBox");
+  const contentBox = document.getElementById("staffContentBox");
+  const pwdInput = document.getElementById("staffPasswordInput");
+  if (authBox) authBox.style.display = "block";
+  if (contentBox) contentBox.style.display = "none";
+  if (pwdInput) pwdInput.value = "";
 }
 
 function closeStaffModal() {
-  document.getElementById("staffModal").classList.remove("show");
+  const modal = document.getElementById("staffModal");
+  if (modal) modal.classList.remove("show");
 }
 
 async function verifyStaffPassword() {
-  const pwd = document.getElementById("staffPasswordInput").value.trim();
+  const pwdInput = document.getElementById("staffPasswordInput");
+  const pwd = pwdInput ? pwdInput.value.trim() : "";
   try {
     const res = await apiGet({ action: "verifyStaffPassword", password: pwd });
     if (res.success) {
-      document.getElementById("staffAuthBox").style.display = "none";
-      document.getElementById("staffContentBox").style.display = "block";
+      const authBox = document.getElementById("staffAuthBox");
+      const contentBox = document.getElementById("staffContentBox");
+      if (authBox) authBox.style.display = "none";
+      if (contentBox) contentBox.style.display = "block";
       loadStaffSummary();
       showToast("解鎖成功！");
     } else {
@@ -1207,6 +1294,7 @@ async function verifyStaffPassword() {
 
 async function loadStaffSummary() {
   const box = document.getElementById("staffSummaryList");
+  if (!box) return;
   box.innerHTML = `<div class="empty">載入中...</div>`;
   try {
     const res = await apiGet({ action: "getAllQueues" });
@@ -1275,16 +1363,23 @@ async function staffAddQueue(songNo, title, artist, brand, language, category, m
 }
 
 function openCustomerModal() {
-  document.getElementById("customerModal").classList.add("show");
-  document.getElementById("customerSearch").value = "";
-  document.getElementById("customerResults").innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
-  document.getElementById("createCustomerArea").style.display = "none";
+  const modal = document.getElementById("customerModal");
+  if (modal) modal.classList.add("show");
+  const searchInput = document.getElementById("customerSearch");
+  if (searchInput) searchInput.value = "";
+  const results = document.getElementById("customerResults");
+  if (results) results.innerHTML = `<div class="empty">請輸入客戶姓名</div>`;
+  const createArea = document.getElementById("createCustomerArea");
+  if (createArea) createArea.style.display = "none";
   cancelEditCustomer();
-  setTimeout(() => document.getElementById("customerSearch").focus(), 100);
+  setTimeout(() => {
+    if (searchInput) searchInput.focus();
+  }, 100);
 }
 
 function closeCustomerModal() {
-  document.getElementById("customerModal").classList.remove("show");
+  const modal = document.getElementById("customerModal");
+  if (modal) modal.classList.remove("show");
 }
 
 async function searchCustomers(keyword) {
@@ -1320,13 +1415,20 @@ async function searchCustomers(keyword) {
 
 function showEditCustomer(id, name, phone, note) {
   editingCustomerId = id;
-  document.getElementById("editCustomerId").textContent = `編號：${id}`;
-  document.getElementById("editCustomerName").value = name;
-  document.getElementById("editCustomerPhone").value = (phone === "null" || phone === "undefined") ? "" : phone;
-  document.getElementById("editCustomerNote").value = (note === "null" || note === "undefined") ? "" : note;
+  const idEl = document.getElementById("editCustomerId");
+  const nameEl = document.getElementById("editCustomerName");
+  const phoneEl = document.getElementById("editCustomerPhone");
+  const noteEl = document.getElementById("editCustomerNote");
+  const editArea = document.getElementById("editCustomerArea");
+  const createArea = document.getElementById("createCustomerArea");
+
+  if (idEl) idEl.textContent = `編號：${id}`;
+  if (nameEl) nameEl.value = name;
+  if (phoneEl) phoneEl.value = (phone === "null" || phone === "undefined") ? "" : phone;
+  if (noteEl) noteEl.value = (note === "null" || note === "undefined") ? "" : note;
   
-  document.getElementById("editCustomerArea").style.display = "block";
-  document.getElementById("createCustomerArea").style.display = "none";
+  if (editArea) editArea.style.display = "block";
+  if (createArea) createArea.style.display = "none";
 }
 
 function cancelEditCustomer() {
@@ -1337,9 +1439,13 @@ function cancelEditCustomer() {
 
 async function updateCustomer() {
   if (!editingCustomerId) return;
-  const name = document.getElementById("editCustomerName").value.trim();
-  const phone = document.getElementById("editCustomerPhone").value.trim();
-  const note = document.getElementById("editCustomerNote").value.trim();
+  const nameEl = document.getElementById("editCustomerName");
+  const phoneEl = document.getElementById("editCustomerPhone");
+  const noteEl = document.getElementById("editCustomerNote");
+  
+  const name = nameEl ? nameEl.value.trim() : "";
+  const phone = phoneEl ? phoneEl.value.trim() : "";
+  const note = noteEl ? noteEl.value.trim() : "";
 
   if (!name) {
     showToast("客戶姓名不能為空");
@@ -1351,7 +1457,8 @@ async function updateCustomer() {
     if (res.success) {
       showToast("更新客戶成功！");
       cancelEditCustomer();
-      const kw = document.getElementById("customerSearch").value.trim();
+      const customerSearch = document.getElementById("customerSearch");
+      const kw = customerSearch ? customerSearch.value.trim() : "";
       searchCustomers(kw);
     } else {
       showToast(res.message || "更新失敗");
@@ -1365,6 +1472,7 @@ function updateCustomerUI() {
   const info = document.getElementById("customerInfo");
   const historyBtn = document.getElementById("historyBtn");
   const clearBtn = document.getElementById("clearCustomerBtn");
+  if (!info) return;
   
   if (!currentCustomer) {
     info.textContent = "尚未選擇客戶";
@@ -1394,14 +1502,19 @@ function selectCustomer(id, name) {
 
 function showCreateCustomer() {
   const area = document.getElementById("createCustomerArea");
-  area.style.display = area.style.display === "none" ? "block" : "none";
-  document.getElementById("editCustomerArea").style.display = "none";
+  const editArea = document.getElementById("editCustomerArea");
+  if (area) area.style.display = area.style.display === "none" ? "block" : "none";
+  if (editArea) editArea.style.display = "none";
 }
 
 async function createCustomer() {
-  const name = document.getElementById("newCustomerName").value.trim();
-  const phone = document.getElementById("newCustomerPhone").value.trim();
-  const note = document.getElementById("newCustomerNote").value.trim();
+  const nameInput = document.getElementById("newCustomerName");
+  const phoneInput = document.getElementById("newCustomerPhone");
+  const noteInput = document.getElementById("newCustomerNote");
+
+  const name = nameInput ? nameInput.value.trim() : "";
+  const phone = phoneInput ? phoneInput.value.trim() : "";
+  const note = noteInput ? noteInput.value.trim() : "";
 
   if (!name) {
     showToast("請輸入客戶姓名");
@@ -1413,10 +1526,11 @@ async function createCustomer() {
     if (res.success) {
       showToast("新增客戶成功！");
       selectCustomer(res.customer_id, name);
-      document.getElementById("newCustomerName").value = "";
-      document.getElementById("newCustomerPhone").value = "";
-      document.getElementById("newCustomerNote").value = "";
-      document.getElementById("createCustomerArea").style.display = "none";
+      if (nameInput) nameInput.value = "";
+      if (phoneInput) phoneInput.value = "";
+      if (noteInput) noteInput.value = "";
+      const createArea = document.getElementById("createCustomerArea");
+      if (createArea) createArea.style.display = "none";
     } else {
       showToast(res.message || "新增失敗");
     }
@@ -1434,6 +1548,7 @@ function toggleFavorite(songNo) {
 
 function showToast(msg) {
   const t = document.getElementById("toast");
+  if (!t) return;
   t.textContent = msg;
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 2500);
