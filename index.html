@@ -948,21 +948,8 @@ async function loadFilterCategories() {
   container.innerHTML = buttonsHtml;
 }
 
-function filterCategory(type, val, btn) {
-  if (type === "brand") {
-    currentBrand = val;
-  } else if (type === "language") {
-    currentLanguage = val;
-  }
-
-  if (btn) {
-    btn.parentElement.querySelectorAll(".category").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-  }
-
-  // 點擊分類後，直接由前端記憶體進行秒篩，不再發送網路請求
+// 重新渲染畫面
   renderSongList();
-}
 
 /* 一次性將所有歌曲抓回前端快取 */
 async function fetchSongsFromServer(isBackground = false) {
