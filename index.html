@@ -704,7 +704,7 @@ audio { width: 100%; margin-top: 10px; }
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbwKKwzX9HQ6VNpiBUMn-S-KDVLrIHMwtw6-NKLOI7Sq6GPOUJ-refzy5SsHH-to-UVD/exec";
 
-let allSongs = [];       // 儲存從後端一次性抓取或快取的全量歌曲庫
+let allSongs = [];       
 let currentLanguage = "全部";
 let currentBrand = "全部";  
 let currentCategory = "全部";
@@ -722,33 +722,14 @@ let editingCustomerId = null;
 
 function loadLocalStorage() {
   try {
-    const savedQueue = localStorage.getItem("ktvQueue");
-    queue = savedQueue ? JSON.parse(savedQueue) : [];
-  } catch (e) { queue = []; }
-
-  try {
-    const savedFavorites = localStorage.getItem("ktvFavorites");
-    favorites = savedFavorites ? JSON.parse(savedFavorites).map(String) : [];
-  } catch (e) { favorites = []; }
-
-  try {
-    const savedCustomer = localStorage.getItem("currentCustomer");
-    if (savedCustomer) currentCustomer = JSON.parse(savedCustomer);
-  } catch (e) { currentCustomer = null; }
-
-  try {
-    const savedTable = localStorage.getItem("currentTableNo");
-    if (savedTable) {
-      currentTableNo = savedTable;
-      document.getElementById("tableNoInput").value = savedTable;
-    }
-  } catch (e) { currentTableNo = ""; }
-
-  try {
+    queue = JSON.parse(localStorage.getItem("ktvQueue") || "[]");
+    favorites = JSON.parse(localStorage.getItem("ktvFavorites") || "[]").map(String);
+    currentCustomer = JSON.parse(localStorage.getItem("currentCustomer") || "null");
+    currentTableNo = localStorage.getItem("currentTableNo") || "";
+    if (currentTableNo) document.getElementById("tableNoInput").value = currentTableNo;
+    
     const cachedSongs = localStorage.getItem("ktvAllSongsCache");
-    if (cachedSongs) {
-      allSongs = JSON.parse(cachedSongs);
-    }
+    if (cachedSongs) allSongs = JSON.parse(cachedSongs);
   } catch (e) {}
 }
 
@@ -763,7 +744,6 @@ async function checkLocationAuth() {
   const descEl = document.getElementById("authDesc");
   const spinnerEl = document.getElementById("authSpinner");
   const errorEl = document.getElementById("authError");
-  const retryBtn = document.getElementById("retryAuthBtn");
 
   descEl.textContent = "正在取得網路與 GPS 定位...";
   try {
@@ -779,9 +759,7 @@ async function checkLocationAuth() {
     }
 
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        await verifyByServer(pos.coords.latitude, pos.coords.longitude, publicIp);
-      },
+      async (pos) => { await verifyByServer(pos.coords.latitude, pos.coords.longitude, publicIp); },
       async () => {
         if (publicIp) await verifyByServer(0, 0, publicIp);
         else authFailed("無法取得 GPS 定位與 IP。");
@@ -835,15 +813,10 @@ async function initKtvSystem() {
   }
 
   const searchInput = document.getElementById("searchInput");
-  
   searchInput.addEventListener("input", function() {
-    const kw = this.value.trim();
-    handleSearchInput(kw);
-    
+    handleSearchInput(this.value.trim());
     clearTimeout(songSearchTimer);
-    songSearchTimer = setTimeout(() => {
-      renderSongList();
-    }, 120);
+    songSearchTimer = setTimeout(() => renderSongList(), 120);
   });
 
   searchInput.addEventListener("keydown", function(e) {
@@ -866,16 +839,10 @@ async function initKtvSystem() {
 
 function handleSearchInput(val) {
   const clearBtn = document.getElementById("clearSearchBtn");
-  if (val.trim().length > 0) {
-    clearBtn.style.display = "flex";
-  } else {
-    clearBtn.style.display = "none";
-  }
+  clearBtn.style.display = val.trim().length > 0 ? "flex" : "none";
 }
 
-function triggerSearch() {
-  renderSongList();
-}
+function triggerSearch() { renderSongList(); }
 
 function clearSearch() {
   const searchInput = document.getElementById("searchInput");
@@ -945,12 +912,13 @@ async function loadFilterCategories() {
   container.innerHTML = buttonsHtml;
 }
 
-// 支援點選全部品牌時聯動重置語言
+// ✨ 支援「點擊兩次取消品牌篩選 (Toggle)」以及聯動重置語言
 function filterCategory(type, val, btn) {
   if (type === "brand") {
-    if (val === "全部") {
+    if (val === "全部" || currentBrand === val) {
+      // 點擊「全部品牌」，或是再次點擊已經選中的弘音/金嗓，即代表取消篩選
       currentBrand = "全部";
-      currentLanguage = "全部";
+      currentLanguage = "全部"; 
       
       const container = document.getElementById("languageContainer");
       if (container) {
@@ -960,6 +928,11 @@ function filterCategory(type, val, btn) {
       }
     } else {
       currentBrand = val;
+      if (btn) {
+        // 切換品牌按鈕的 active 狀態
+        btn.parentElement.querySelectorAll(".category").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      }
     }
   } else if (type === "language") {
     currentLanguage = val;
@@ -988,9 +961,7 @@ async function fetchSongsFromServer(isBackground = false) {
       if (!isBackground) list.innerHTML = `<div class="empty">載入歌單失敗</div>`;
     }
   } catch (e) {
-    if (!isBackground) {
-      list.innerHTML = `<div class="empty">搜尋失敗，請檢查網路連線</div>`;
-    }
+    if (!isBackground) list.innerHTML = `<div class="empty">搜尋失敗，請檢查網路連線</div>`;
   }
 }
 
