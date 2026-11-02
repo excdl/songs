@@ -706,7 +706,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwKKwzX9HQ6VNpiBUMn-S-K
 
 let allSongs = [];       // 儲存從後端一次性抓取或快取的全量歌曲庫
 let currentLanguage = "全部";
-let currentBrand = "全部";  // 預設為全部，發揮全量快取優勢
+let currentBrand = "全部";  
 let currentCategory = "全部";
 let currentCustomer = null;
 let currentTableNo = "";
@@ -744,7 +744,6 @@ function loadLocalStorage() {
     }
   } catch (e) { currentTableNo = ""; }
 
-  // 嘗試從 LocalStorage 秒讀快取的整份歌單，達到 0 秒開局體驗
   try {
     const cachedSongs = localStorage.getItem("ktvAllSongsCache");
     if (cachedSongs) {
@@ -828,7 +827,6 @@ async function initKtvSystem() {
   await loadFilterCategories(); 
   startQueueSync();
 
-  // 如果 LocalStorage 內本來就有舊快取，先直接渲染畫面，然後在背景安靜更新歌單
   if (allSongs.length > 0) {
     renderSongList();
     fetchSongsFromServer(true); 
@@ -842,7 +840,6 @@ async function initKtvSystem() {
     const kw = this.value.trim();
     handleSearchInput(kw);
     
-    // 前端記憶體搜尋不需要等待網路往返，將 Debounce 縮短至 120ms，反應極度跟手
     clearTimeout(songSearchTimer);
     songSearchTimer = setTimeout(() => {
       renderSongList();
@@ -948,10 +945,33 @@ async function loadFilterCategories() {
   container.innerHTML = buttonsHtml;
 }
 
-// 重新渲染畫面
-  renderSongList();
+// 支援點選全部品牌時聯動重置語言
+function filterCategory(type, val, btn) {
+  if (type === "brand") {
+    if (val === "全部") {
+      currentBrand = "全部";
+      currentLanguage = "全部";
+      
+      const container = document.getElementById("languageContainer");
+      if (container) {
+        container.querySelectorAll(".category").forEach(b => b.classList.remove("active"));
+        const firstBtn = container.querySelector(".category");
+        if (firstBtn) firstBtn.classList.add("active");
+      }
+    } else {
+      currentBrand = val;
+    }
+  } else if (type === "language") {
+    currentLanguage = val;
+    if (btn) {
+      btn.parentElement.querySelectorAll(".category").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    }
+  }
 
-/* 一次性將所有歌曲抓回前端快取 */
+  renderSongList();
+}
+
 async function fetchSongsFromServer(isBackground = false) {
   const list = document.getElementById("songList");
   if (!isBackground && allSongs.length === 0) {
@@ -974,7 +994,6 @@ async function fetchSongsFromServer(isBackground = false) {
   }
 }
 
-/* 核心效能優化：純前端記憶體過濾與排序（優先弘音，其次金嗓，最後其他品牌） */
 function renderSongList() {
   const list = document.getElementById("songList");
   const sortType = document.getElementById("sortSelect").value;
@@ -1002,7 +1021,6 @@ function renderSongList() {
     return;
   }
 
-  // 定義品牌優先級：弘音 (1) -> 金嗓 (2) -> 其他品牌 (3)
   function getBrandPriority(brandName) {
     const b = String(brandName || "").trim();
     if (b.includes("弘音")) return 1;
@@ -1010,14 +1028,11 @@ function renderSongList() {
     return 3;
   }
 
-  // 排序：優先按品牌順序，若品牌相同則依照下拉選單或預設規則排序
   displaySongs.sort((a, b) => {
     const priorityA = getBrandPriority(a.brand);
     const priorityB = getBrandPriority(b.brand);
 
-    if (priorityA !== priorityB) {
-      return priorityA - priorityB;
-    }
+    if (priorityA !== priorityB) return priorityA - priorityB;
 
     if (sortType === "title_len_asc") {
       return String(a.title || "").length - String(b.title || "").length;
@@ -1031,7 +1046,6 @@ function renderSongList() {
     return 0;
   });
 
-  // 設定渲染限制避免手機 DOM 節點過多卡頓
   const renderLimit = 120;
   const slicedSongs = displaySongs.slice(0, renderLimit);
 
@@ -1095,11 +1109,7 @@ async function addHistorySong(songNo, title, artist, brand, language) {
   }
 
   const newItem = {
-    song_no: songNo,
-    title: title,
-    artist: artist,
-    brand: brand,
-    language: language,
+    song_no: songNo, title, artist, brand, language,
     queueId: Date.now() + Math.random(),
     table_no: currentTableNo,
     added_at: Date.now()
