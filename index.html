@@ -702,11 +702,11 @@ audio { width: 100%; margin-top: 10px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyu_CZLY3h9SOuJFhdbiJPC3L2uUABhMOX4znD5B0bKc5FT-uN88DPbcNEbrFr8gPM/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwKKwzX9HQ6VNpiBUMn-S-KDVLrIHMwtw6-NKLOI7Sq6GPOUJ-refzy5SsHH-to-UVD/exec";
 
-let allSongs = [];
+let allSongs = [];       // ✨ 儲存從後端一次性抓取或快取的全量歌曲庫
 let currentLanguage = "全部";
-let currentBrand = "弘音"; 
+let currentBrand = "全部";  // 預設為全部，發揮全量快取優勢
 let currentCategory = "全部";
 let currentCustomer = null;
 let currentTableNo = "";
@@ -719,10 +719,6 @@ let ktvInitialized = false;
 let authChecking = false;
 let syncInterval = null;
 let editingCustomerId = null;
-
-// ✨ 優化 1：宣告 AbortController 與快取容器以防範請求競態與重複發送
-let currentSearchController = null;
-const searchCache = new Map();
 
 function loadLocalStorage() {
   try {
@@ -747,6 +743,14 @@ function loadLocalStorage() {
       document.getElementById("tableNoInput").value = savedTable;
     }
   } catch (e) { currentTableNo = ""; }
+
+  // ✨ 嘗試從 LocalStorage 秒讀快取的整份歌單，達到 0 秒開局體驗
+  try {
+    const cachedSongs = localStorage.getItem("ktvAllSongsCache");
+    if (cachedSongs) {
+      allSongs = JSON.parse(cachedSongs);
+    }
+  } catch (e) {}
 }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -824,25 +828,31 @@ async function initKtvSystem() {
   await loadFilterCategories(); 
   startQueueSync();
 
-  fetchSongs("", true);
+  // ✨ 如果 LocalStorage 內本來就有舊快取，先直接渲染畫面，然後在背景安靜更新歌單
+  if (allSongs.length > 0) {
+    renderSongList();
+    fetchSongsFromServer(true); 
+  } else {
+    fetchSongsFromServer(false);
+  }
 
   const searchInput = document.getElementById("searchInput");
   
-  searchInput.addEventListener("input", function(e) {
+  searchInput.addEventListener("input", function() {
     const kw = this.value.trim();
     handleSearchInput(kw);
     
-    // ✨ 優化 2：將 Debounce 縮短至 250ms 反應更靈敏
+    // ✨ 前端記憶體搜尋不需要等待網路往返，將 Debounce 縮短至 120ms，反應極度跟手
     clearTimeout(songSearchTimer);
     songSearchTimer = setTimeout(() => {
-      fetchSongs(kw);
-    }, 250);
+      renderSongList();
+    }, 120);
   });
 
   searchInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
       clearTimeout(songSearchTimer);
-      triggerSearch();
+      renderSongList();
     }
   });
 
@@ -867,15 +877,14 @@ function handleSearchInput(val) {
 }
 
 function triggerSearch() {
-  const kw = document.getElementById("searchInput").value.trim();
-  fetchSongs(kw, true);
+  renderSongList();
 }
 
 function clearSearch() {
   const searchInput = document.getElementById("searchInput");
   searchInput.value = "";
   document.getElementById("clearSearchBtn").style.display = "none";
-  fetchSongs("", true); 
+  renderSongList(); 
   searchInput.focus();
 }
 
@@ -902,10 +911,9 @@ function startQueueSync() {
   }, 3000);
 }
 
-async function apiGet(params, signal = null) {
+async function apiGet(params) {
   const query = new URLSearchParams(params);
-  const options = signal ? { signal } : {};
-  const res = await fetch(`${API_URL}?${query.toString()}`, options);
+  const res = await fetch(`${API_URL}?${query.toString()}`);
   return res.json();
 }
 
@@ -923,9 +931,9 @@ async function loadFilterCategories() {
   if (!container) return;
 
   let buttonsHtml = `
-    <button class="category active" onclick="filterCategory('brand', '弘音', this)">弘音</button>
+    <button class="category active" onclick="filterCategory('brand', '全部', this)">全部品牌</button>
+    <button class="category" onclick="filterCategory('brand', '弘音', this)">弘音</button>
     <button class="category" onclick="filterCategory('brand', '金嗓', this)">金嗓</button>
-    <button class="category" onclick="filterCategory('全部', '全部', this)">全部</button>
   `;
 
   try {
@@ -941,80 +949,65 @@ async function loadFilterCategories() {
 }
 
 function filterCategory(type, val, btn) {
-  if (type === "全部") {
-    currentBrand = "全部";
-    currentLanguage = "全部";
-  } else if (type === "brand") {
+  if (type === "brand") {
     currentBrand = val;
-    currentLanguage = "全部"; 
   } else if (type === "language") {
     currentLanguage = val;
   }
 
-  document.querySelectorAll("#languageContainer .category").forEach(b => b.classList.remove("active"));
-  if (btn) btn.classList.add("active");
+  if (btn) {
+    btn.parentElement.querySelectorAll(".category").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  }
 
-  fetchSongs(document.getElementById("searchInput").value.trim(), true);
+  // ✨ 點擊分類後，直接由前端記憶體進行秒篩，不再發送網路請求
+  renderSongList();
 }
 
-async function fetchSongs(keyword = "", forceServer = false) {
+/* ✨ 一次性將所有歌曲抓回前端快取 */
+async function fetchSongsFromServer(isBackground = false) {
   const list = document.getElementById("songList");
-
-  // ✨ 優化 3：如果強制更新，清除快取
-  if (forceServer) {
-    searchCache.clear();
+  if (!isBackground && allSongs.length === 0) {
+    list.innerHTML = `<div class="empty">載入完整歌單中...</div>`;
   }
 
-  const cacheKey = `${currentBrand}_${currentLanguage}_${keyword}`;
-  if (!forceServer && searchCache.has(cacheKey)) {
-    allSongs = searchCache.get(cacheKey);
-    renderSongList();
-    return;
-  }
-
-  // ✨ 優化 4：取消上一個尚未結束的 API 請求（防止 Race Condition 造成的查無資料錯亂）
-  if (currentSearchController) {
-    currentSearchController.abort();
-  }
-  currentSearchController = new AbortController();
-
-  list.innerHTML = `<div class="empty">搜尋中...</div>`;
   try {
-    const res = await apiGet({ 
-      action: "songs", 
-      q: keyword, 
-      language: currentLanguage,
-      brand: currentBrand 
-    }, currentSearchController.signal);
-
-    allSongs = Array.isArray(res.data) ? res.data : [];
-    searchCache.set(cacheKey, allSongs);
-    renderSongList();
-  } catch (e) {
-    if (e.name === 'AbortError') {
-      // 略過被主動取消的請求錯誤
-      return;
+    const res = await apiGet({ action: "allSongs" });
+    if (res.success && Array.isArray(res.data)) {
+      allSongs = res.data;
+      localStorage.setItem("ktvAllSongsCache", JSON.stringify(allSongs));
+      renderSongList();
+    } else {
+      if (!isBackground) list.innerHTML = `<div class="empty">載入歌單失敗</div>`;
     }
-    list.innerHTML = `<div class="empty">搜尋失敗，請再試一次</div>`;
+  } catch (e) {
+    if (!isBackground) {
+      list.innerHTML = `<div class="empty">搜尋失敗，請檢查網路連線</div>`;
+    }
   }
 }
 
+/* ✨ 核心效能優化：純前端記憶體過濾與排序（達到秒開零延遲） */
 function renderSongList() {
   const list = document.getElementById("songList");
   const sortType = document.getElementById("sortSelect").value;
   const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
   
   if (!allSongs || allSongs.length === 0) {
-    list.innerHTML = `<div class="empty">沒有找到符合的歌曲</div>`;
+    list.innerHTML = `<div class="empty">歌單載入中或沒有找到符合的歌曲</div>`;
     return;
   }
 
   let displaySongs = allSongs.filter(song => {
+    if (currentBrand !== "全部" && String(song.brand || "") !== currentBrand) return false;
+    if (currentLanguage !== "全部" && String(song.language || "") !== currentLanguage) return false;
+
     if (!keyword) return true;
     const songNo = String(song.song_no || "").toLowerCase();
     const title = String(song.title || "").toLowerCase();
     const artist = String(song.artist || "").toLowerCase();
-    return songNo.includes(keyword) || title.includes(keyword) || artist.includes(keyword);
+    const brand = String(song.brand || "").toLowerCase();
+    return songNo.includes(keyword) || title.includes(keyword) || artist.includes(keyword) || brand.includes(keyword);
   });
 
   if (displaySongs.length === 0) {
@@ -1032,7 +1025,11 @@ function renderSongList() {
     displaySongs.sort((a, b) => String(b.artist || "").length - String(a.artist || "").length);
   }
 
-  list.innerHTML = displaySongs.map(song => {
+  // ✨ 設定渲染限制避免手機 DOM 節點過多卡頓
+  const renderLimit = 120;
+  const slicedSongs = displaySongs.slice(0, renderLimit);
+
+  list.innerHTML = slicedSongs.map(song => {
     const songNo = String(song.song_no || "");
     const isFavorite = favorites.includes(songNo);
     return `
@@ -1052,7 +1049,7 @@ function renderSongList() {
         </div>
       </div>
     `;
-  }).join("");
+  }).join("") + (displaySongs.length > renderLimit ? `<div class="empty" style="padding:15px;color:#888;">僅顯示前 ${renderLimit} 筆結果，請輸入更詳細的關鍵字縮小範圍</div>` : "");
 }
 
 async function addSong(songNo) {
